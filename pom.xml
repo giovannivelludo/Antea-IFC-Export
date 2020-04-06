@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.anteash</groupId>
+    <artifactId>ifc</artifactId>
+    <packaging>jar</packaging>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>Antea IFC Export</name>
+
+    <prerequisites>
+        <maven>3.3.3</maven>
+    </prerequisites>
+
+    <issueManagement>
+        <system>Redmine</system>
+        <url>http://redmine.antea.bogus/</url>
+    </issueManagement>
+    <ciManagement>
+        <system>hudson</system>
+        <url>http://jenkins.anteash.com/</url>
+    </ciManagement>
+    <scm>
+        <connection>scm:git:ssh://${user.name}@git.antea.bogus/srv/git/ifc.git/</connection>
+        <developerConnection>scm:git:ssh://${user.name}@git.antea.bogus/srv/git/ifc.git/</developerConnection>
+    </scm>
+    <inceptionYear>2020</inceptionYear>
+    <organization>
+        <name>Antea srl</name>
+    </organization>
+
+    <distributionManagement>
+        <repository>
+            <id>m2</id>
+            <name>Repository maven.antea.bogus</name>
+            <url>scpexe://maven.antea.bogus/srv/maven</url>
+        </repository>
+    </distributionManagement>
+
+    <repositories>
+        <!-- Repository condivisa Antea. -->
+        <repository>
+            <id>antea</id>
+            <name>Repository Aziendale Antea</name>
+            <url>http://maven.antea.bogus</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>daily</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <properties>
+        <target.version>1.8</target.version>
+        <version.bbox>1.27.0</version.bbox>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.anteash</groupId>
+                <artifactId>base-entities</artifactId>
+                <version>${version.bbox}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.anteash</groupId>
+                <artifactId>eytukan-entities</artifactId>
+                <version>${version.bbox}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.10.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.12</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.13</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>28.2-jre</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.classgraph</groupId>
+                <artifactId>classgraph</artifactId>
+                <version>4.8.60</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.anteash</groupId>
+            <artifactId>base-entities</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.anteash</groupId>
+            <artifactId>eytukan-entities</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>libs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <!-- Copia i jar delle dipendenze nella target. -->
+                                <id>copy-dependencies</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <silent>true</silent>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <overWriteReleases>false</overWriteReleases>
+                                    <overWriteSnapshots>false</overWriteSnapshots>
+                                    <overWriteIfNewer>true</overWriteIfNewer>
+                                    <excludeGroupIds>org.netbeans.api</excludeGroupIds>
+                                    <includeScope>runtime</includeScope>
+                                    <includeTypes>dll,so,jar</includeTypes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>${target.version}</source>
+                    <target>${target.version}</target>
+                    <encoding>UTF-8</encoding>
+                    <meminitial>512m</meminitial>
+                    <maxmem>4g</maxmem>
+                    <showDeprecation>false</showDeprecation>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
