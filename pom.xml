@@ -101,10 +101,19 @@
                 <artifactId>classgraph</artifactId>
                 <version>4.8.60</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.pipauwel</groupId>
+                <artifactId>IFC.JAVA</artifactId>
+                <version>0.1-SNAPSHOT</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>com.github.pipauwel</groupId>
+            <artifactId>IFC.JAVA</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.anteash</groupId>
             <artifactId>base-entities</artifactId>
