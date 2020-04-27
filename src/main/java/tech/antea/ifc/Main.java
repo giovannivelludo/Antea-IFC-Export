@@ -168,6 +168,9 @@ public class Main {
                 new IfcStyledItem(
                         new IfcStyleAssignmentSelect[]{styleAssignment});
         styledCylinder.setItem(cylinder);
+        Set<IfcStyledItem> cylinderStyler = new HashSet<>();
+        cylinderStyler.add(styledCylinder);
+        cylinder.setStyledByItem(cylinderStyler);
 
         // ------- Creating a wall with the shape of the cylinder we just
         // made -------
@@ -175,7 +178,7 @@ public class Main {
         IfcLocalPlacement wallPlacement = new IfcLocalPlacement(worldCoordSys);
         IfcShapeRepresentation cylinderShapeRepr =
                 new IfcShapeRepresentation(reprContext,
-                        new IfcRepresentationItem[]{styledCylinder});
+                        new IfcRepresentationItem[]{cylinder});
         cylinderShapeRepr.setRepresentationIdentifier("Body");
         cylinderShapeRepr.setRepresentationType("SweptSolid");
         IfcProductDefinitionShape cylinderDefinitionShape =
