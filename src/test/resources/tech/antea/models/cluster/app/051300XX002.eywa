@@ -1,1 +1,212 @@
-{"metadata":{"type":"eywa 1.0"},"hints":{"unit":0,"name":"05-130-0-XX-002"},"object":{"type":"Empty","imid":1169127730,"children":[{"type":"Flange","radius":84.14,"crownRadius":190.50,"tangLength":1.00,"crownThickness":55.63,"thickness":1.00,"lining":0.00,"switched":true,"imId":1169127731,"name":"Flangia","description":{"CATEGORY":"APPFLANGE","ADESCR":"Flangia","NDIAMETRO":168.28,"ITIPO_STD":"0-ANSI","ITIPO_FAMSPEC":"","NDIAM_CORONA":381,"NCODOLO":1,"NLUNGHEZZA":56.63,"ITIPO_FLANGIA":"0-B165_SW"},"matrix":[1.00,0.00,0.00,0.00,0.00,0.00,1.00,0.00,0.00,-1.00,0.00,0.00,149682.90,136323.07,1079.14,1.00]},{"type":"Shell","radius1":177.80,"radius2":177.80,"length":766.14,"thickness":4.78,"lining":0.00,"imId":1169127732,"name":"Mantello","description":{"CATEGORY":"APPMANTELLI","ADESCR":"Mantello","NDIAMETRO":355.6,"NSPESS":4.78,"NLUNGHEZZA":766.14,"ITIPO_STD":"0-ANSI","ITIPO_FAMSPEC":""},"matrix":[-1.00,0.00,0.00,0.00,0.00,0.00,1.00,0.00,0.00,1.00,0.00,0.00,149682.90,136323.07,1135.77,1.00],"children":[{"type":"Shell","radius1":30.17,"radius2":30.17,"length":20.00,"thickness":0.50,"lining":0.00,"imId":1169127733,"name":"Mantello","description":{"CATEGORY":"APPMANTELLI","ADESCR":"Mantello","NDIAMETRO":60.33,"ASCHEDULE":"ST","NLUNGHEZZA":20,"ITIPO_STD":"0-ANSI","ITIPO_FAMSPEC":""},"matrix":[0.00,-1.00,0.00,0.00,1.00,0.00,0.00,0.00,0.00,0.00,1.00,0.00,177.80,650.00,0.00,1.00]},{"type":"Flange","radius":30.17,"crownRadius":30.17,"tangLength":2.00,"crownThickness":0.00,"thickness":1.00,"lining":0.00,"imId":1169127734,"name":"Flangia","description":{"CATEGORY":"APPFLANGE","ADESCR":"Flangia","NDIAMETRO":60.33,"ITIPO_STD":"0-ANSI","ITIPO_FAMSPEC":"","NDIAM_CORONA":60.33,"NCODOLO":2,"NLUNGHEZZA":2,"ITIPO_FLANGIA":"0-B165_SW"},"matrix":[0.00,-1.00,0.00,0.00,1.00,0.00,0.00,0.00,0.00,0.00,1.00,0.00,197.80,650.00,0.00,1.00]}]},{"type":"Flange","radius":84.14,"crownRadius":190.50,"tangLength":1.00,"crownThickness":55.63,"thickness":1.00,"lining":0.00,"imId":1169127735,"name":"Flangia","description":{"CATEGORY":"APPFLANGE","ADESCR":"Flangia","NDIAMETRO":168.28,"ITIPO_STD":"0-ANSI","ITIPO_FAMSPEC":"","NDIAM_CORONA":381,"NCODOLO":1,"NLUNGHEZZA":56.63,"ITIPO_FLANGIA":"0-B165_SW"},"matrix":[1.00,0.00,0.00,0.00,0.00,0.00,1.00,0.00,0.00,-1.00,0.00,0.00,149682.90,136323.07,1901.91,1.00]}]}}
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-130-0-XX-002"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169127730,
+    "children": [
+      {
+        "type": "Flange",
+        "radius": 84.14,
+        "crownRadius": 190.50,
+        "tangLength": 1.00,
+        "crownThickness": 55.63,
+        "thickness": 1.00,
+        "lining": 0.00,
+        "switched": true,
+        "imId": 1169127731,
+        "name": "Flangia",
+        "description": {
+          "CATEGORY": "APPFLANGE",
+          "ADESCR": "Flangia",
+          "NDIAMETRO": 168.28,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "NDIAM_CORONA": 381,
+          "NCODOLO": 1,
+          "NLUNGHEZZA": 56.63,
+          "ITIPO_FLANGIA": "0-B165_SW"
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          -1.00,
+          0.00,
+          0.00,
+          149682.90,
+          136323.07,
+          1079.14,
+          1.00
+        ]
+      },
+      {
+        "type": "Shell",
+        "radius1": 177.80,
+        "radius2": 177.80,
+        "length": 766.14,
+        "thickness": 4.78,
+        "lining": 0.00,
+        "imId": 1169127732,
+        "name": "Mantello",
+        "description": {
+          "CATEGORY": "APPMANTELLI",
+          "ADESCR": "Mantello",
+          "NDIAMETRO": 355.6,
+          "NSPESS": 4.78,
+          "NLUNGHEZZA": 766.14,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": ""
+        },
+        "matrix": [
+          -1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          149682.90,
+          136323.07,
+          1135.77,
+          1.00
+        ],
+        "children": [
+          {
+            "type": "Shell",
+            "radius1": 30.17,
+            "radius2": 30.17,
+            "length": 20.00,
+            "thickness": 0.50,
+            "lining": 0.00,
+            "imId": 1169127733,
+            "name": "Mantello",
+            "description": {
+              "CATEGORY": "APPMANTELLI",
+              "ADESCR": "Mantello",
+              "NDIAMETRO": 60.33,
+              "ASCHEDULE": "ST",
+              "NLUNGHEZZA": 20,
+              "ITIPO_STD": "0-ANSI",
+              "ITIPO_FAMSPEC": ""
+            },
+            "matrix": [
+              0.00,
+              -1.00,
+              0.00,
+              0.00,
+              1.00,
+              0.00,
+              0.00,
+              0.00,
+              0.00,
+              0.00,
+              1.00,
+              0.00,
+              177.80,
+              650.00,
+              0.00,
+              1.00
+            ]
+          },
+          {
+            "type": "Flange",
+            "radius": 30.17,
+            "crownRadius": 30.17,
+            "tangLength": 2.00,
+            "crownThickness": 0.00,
+            "thickness": 1.00,
+            "lining": 0.00,
+            "imId": 1169127734,
+            "name": "Flangia",
+            "description": {
+              "CATEGORY": "APPFLANGE",
+              "ADESCR": "Flangia",
+              "NDIAMETRO": 60.33,
+              "ITIPO_STD": "0-ANSI",
+              "ITIPO_FAMSPEC": "",
+              "NDIAM_CORONA": 60.33,
+              "NCODOLO": 2,
+              "NLUNGHEZZA": 2,
+              "ITIPO_FLANGIA": "0-B165_SW"
+            },
+            "matrix": [
+              0.00,
+              -1.00,
+              0.00,
+              0.00,
+              1.00,
+              0.00,
+              0.00,
+              0.00,
+              0.00,
+              0.00,
+              1.00,
+              0.00,
+              197.80,
+              650.00,
+              0.00,
+              1.00
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Flange",
+        "radius": 84.14,
+        "crownRadius": 190.50,
+        "tangLength": 1.00,
+        "crownThickness": 55.63,
+        "thickness": 1.00,
+        "lining": 0.00,
+        "imId": 1169127735,
+        "name": "Flangia",
+        "description": {
+          "CATEGORY": "APPFLANGE",
+          "ADESCR": "Flangia",
+          "NDIAMETRO": 168.28,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "NDIAM_CORONA": 381,
+          "NCODOLO": 1,
+          "NLUNGHEZZA": 56.63,
+          "ITIPO_FLANGIA": "0-B165_SW"
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          -1.00,
+          0.00,
+          0.00,
+          149682.90,
+          136323.07,
+          1901.91,
+          1.00
+        ]
+      }
+    ]
+  }
+}

@@ -102,7 +102,7 @@
                 <version>4.8.60</version>
             </dependency>
             <dependency>
-                <groupId>com.github.pipauwel</groupId>
+                <groupId>com.anteash</groupId>
                 <artifactId>IFC.JAVA</artifactId>
                 <version>0.1-SNAPSHOT</version>
             </dependency>
@@ -111,7 +111,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.pipauwel</groupId>
+            <groupId>com.anteash</groupId>
             <artifactId>IFC.JAVA</artifactId>
         </dependency>
         <dependency>
@@ -211,6 +211,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
