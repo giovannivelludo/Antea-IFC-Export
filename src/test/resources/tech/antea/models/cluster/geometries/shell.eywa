@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": "CLUSTER",
+    "name": "05-ML-120-0-013-1\/2\"-02A-V"
+  },
+  "object": {
+    "type": "Shell",
+    "imId": 1169128973,
+    "name": "Tubo",
+    "radius": 10.67,
+    "length": 229.42,
+    "thickness": 4.78,
+    "lining": 0.00,
+    "description": {
+      "CATEGORY": "TUBTUBI",
+      "ADESCR": "TB5293154",
+      "NCOR_ALLOW": 3,
+      "NDIAMETRO": 21.34,
+      "ASCHEDULE": "160",
+      "AMAT": "CARBON STEEL",
+      "ITIPO_STD": "0-ANSI",
+      "ITIPO_FAMSPEC": "",
+      "AGRUPPO_SCH": "A02",
+      "NSPESS": 4.78,
+      "NLUNGHEZZA": 229.420999999988
+    },
+    "matrix": [
+      1.00,
+      0.00,
+      0.00,
+      0.00,
+      0.00,
+      1.00,
+      0.00,
+      0.00,
+      0.00,
+      0.00,
+      1.00,
+      0.00,
+      150841.07,
+      127501.77,
+      1118.74,
+      1.00
+    ]
+  }
+}

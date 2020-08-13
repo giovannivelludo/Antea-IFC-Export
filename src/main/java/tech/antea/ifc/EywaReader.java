@@ -109,7 +109,8 @@ public class EywaReader {
      * @param eywaRoot The {@link EywaRoot} to convert.
      * @throws NullPointerException     If {@code eywaRoot} is {@code null}.
      * @throws IllegalArgumentException If {@code eywaRoot.metadata.use} exists
-     *                                  and is not {@code view}.
+     *                                  and is not {@code view}, if {@code
+     *                                  eywaRoot.object} is {@code null}.
      */
     public void convert(@NonNull EywaRoot eywaRoot) {
         if (eywaRoot.getMetadata() != null &&
@@ -121,6 +122,10 @@ public class EywaReader {
         }
         builder.addHints(eywaRoot.getHints());
         Primitive rootObject = eywaRoot.getObject();
+        if (rootObject == null) {
+            throw new IllegalArgumentException(
+                    "can't convert an EywaRoot with no object");
+        }
         builderMethod.get(rootObject.getClass()).accept(rootObject);
         addChildren(rootObject);
     }

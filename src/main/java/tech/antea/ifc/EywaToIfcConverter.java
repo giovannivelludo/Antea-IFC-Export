@@ -620,7 +620,6 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(Shell obj) {
         IfcAxis2Placement3D objPosition = computeLocation(obj);
-        //TODO: use BigDecimal to get precise results?
         //creating a parallelogram that is the vertical section of the shell
         double height = obj.getLength();
         double radiusDifference = obj.getRadius1() - obj.getRadius2();
@@ -649,8 +648,8 @@ public class EywaToIfcConverter implements EywaConverter {
         double minRadius = min(obj.getRadius2(), obj.getRadius1());
         IfcAxis2Placement2D sweptAreaPlacement =
                 new IfcAxis2Placement2D(new IfcCartesianPoint(
-                        -minRadius + (base / 2) - (abs(topBaseOffset) / 2),
-                        -height / 2), new IfcDirection(1, 0));
+                        minRadius - (base / 2) + (abs(topBaseOffset) / 2),
+                        height / 2), new IfcDirection(1, 0));
 
         IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
                 IfcProfileTypeEnum.AREA,
