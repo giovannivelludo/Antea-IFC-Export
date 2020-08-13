@@ -38,10 +38,9 @@ import lombok.NonNull;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static java.lang.Math.*;
 
 public class EywaToIfcConverter implements EywaConverter {
 
@@ -54,10 +53,12 @@ public class EywaToIfcConverter implements EywaConverter {
      * Owner history for all {@link IfcRoot} objects in this project.
      */
     private final IfcOwnerHistory ownerHistory;
+    private final IfcGeometricRepresentationContext
+            geometricRepresentationContext;
     /**
-     * The {@link IfcSite} containing all Eywa geometries.
+     * The set containing the conversion of all Eywa geometries.
      */
-    private final IfcSite defaultSite;
+    private final Set<IfcProduct> geometries;
     /**
      * Maps each Primitive in the Eywa tree to its position relative to the
      * world coordinate system.
@@ -91,9 +92,23 @@ public class EywaToIfcConverter implements EywaConverter {
                                                 personAndOrganization,
                                                 application,
                                                 currentTime);
-        this.defaultSite = IfcSite.builder().globalId(new IfcGloballyUniqueId())
-                .ownerHistory(ownerHistory)
-                .compositionType(IfcElementCompositionEnum.COMPLEX).build();
+        IfcAxis2Placement3D worldCoordinateSystem =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0, 0, 1),
+                                        new IfcDirection(1, 0, 0));
+        this.geometricRepresentationContext =
+                new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
+                                                      new IfcLabel("Model"),
+                                                      new IfcDimensionCount(3),
+                                                      //TODO: decide what
+                                                      // precision to use
+                                                      new IfcReal(1.E-05),
+                                                      worldCoordinateSystem,
+                                                      new IfcDirection(0,
+                                                                       1,
+                                                                       0));
+
+        this.geometries = new HashSet<>();
         this.objPositions = new HashMap<>();
     }
 
@@ -259,22 +274,6 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public IfcProject getResult() {
-        IfcAxis2Placement3D worldCoordinateSystem =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
-        IfcGeometricRepresentationContext geometricRepresentationContext =
-                new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
-                                                      new IfcLabel("Model"),
-                                                      new IfcDimensionCount(3),
-                                                      //TODO: decide what
-                                                      // precision to use
-                                                      new IfcReal(1.E-05),
-                                                      worldCoordinateSystem,
-                                                      new IfcDirection(0,
-                                                                       1,
-                                                                       0));
-
         IfcSIUnit millimeter = new IfcSIUnit(IfcUnitEnum.LENGTHUNIT,
                                              IfcSIPrefix.MILLI,
                                              IfcSIUnitName.METRE);
@@ -300,10 +299,20 @@ public class EywaToIfcConverter implements EywaConverter {
                         .representationContext(geometricRepresentationContext)
                         .unitsInContext(unitAssignment).build();
 
+        IfcSite ifcSite = IfcSite.builder().globalId(new IfcGloballyUniqueId())
+                .ownerHistory(ownerHistory)
+                .compositionType(IfcElementCompositionEnum.COMPLEX).build();
+
         IfcRelAggregates.builder().globalId(new IfcGloballyUniqueId())
                 .ownerHistory(ownerHistory)
                 .name(new IfcLabel("Project to site link"))
-                .relatingObject(ifcProject).relatedObject(defaultSite).build();
+                .relatingObject(ifcProject).relatedObject(ifcSite).build();
+
+        IfcRelContainedInSpatialStructure.
+                builder().globalId(new IfcGloballyUniqueId())
+                .ownerHistory(ownerHistory)
+                .name(new IfcLabel("Site to geometries link"))
+                .relatingStructure(ifcSite).relatedElements(geometries).build();
 
         return ifcProject;
     }
@@ -611,20 +620,84 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(Shell obj) {
         IfcAxis2Placement3D objPosition = computeLocation(obj);
-        double radius1 = obj.getRadius1();
-        double radius2 = obj.getRadius2();
-        double length = obj.getLength();
-        IfcAxis2Placement2D circlePosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
-                                        new IfcDirection(1, 0));
-        IfcCircleProfileDef circle1 =
-                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
-                                        null,
-                                        circlePosition,
-                                        new IfcPositiveLengthMeasure(radius1));
+        //TODO: use BigDecimal to get precise results?
+        //creating a parallelogram that is the vertical section of the shell
+        double height = obj.getLength();
+        double radiusDifference = obj.getRadius1() - obj.getRadius2();
+        double side =
+                sqrt((height * height) + (radiusDifference * radiusDifference));
+        // alfa is the bottom right angle of the parallelogram
+        double sinAlfa = height / side;
+        double base = obj.getThickness() / sinAlfa;
+        double topBaseOffset;
+        if (obj.getRadius2() < obj.getRadius1()) {
+            // if the top base is shifted left compared to the bottom base,
+            // the offset must be negative
+            topBaseOffset = -sqrt(1 - (sinAlfa * sinAlfa)) *
+                    side; // == -cos(asin(sinAlfa)) * side
+        } else if (obj.getRadius2().equals(obj.getRadius1())) {
+            topBaseOffset = 0;
+        } else {
+            // the top base is shifted right compared to the bottom base, the
+            // offset must be positive
+            topBaseOffset =
+                    sinAlfa * side; // == -cos((PI / 2) + asin(sinAlfa)) * side
+        }
+        // the parallelogram will be rotated around the y axis and the center
+        // of its bounding box is currently on the origin of the xy plane, so
+        // it must be shifted to the top right
+        double minRadius = min(obj.getRadius2(), obj.getRadius1());
+        IfcAxis2Placement2D sweptAreaPlacement =
+                new IfcAxis2Placement2D(new IfcCartesianPoint(
+                        -minRadius + (base / 2) - (abs(topBaseOffset) / 2),
+                        -height / 2), new IfcDirection(1, 0));
 
-
-
+        IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sweptAreaPlacement,
+                new IfcPositiveLengthMeasure(base),
+                new IfcPositiveLengthMeasure(base),
+                new IfcPositiveLengthMeasure(height),
+                new IfcLengthMeasure(topBaseOffset));
+        IfcAxis2Placement3D shellPlacement =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        // the z axis is rotated by PI/2
+                                        // towards the negative y axis, and
+                                        // the y axis becomes the vertical axis
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid shell = new IfcRevolvedAreaSolid(sweptArea,
+                                                              shellPlacement,
+                                                              new IfcAxis1Placement(
+                                                                      new IfcCartesianPoint(
+                                                                              0,
+                                                                              0,
+                                                                              0),
+                                                                      new IfcDirection(
+                                                                              0,
+                                                                              1,
+                                                                              0)),
+                                                              new IfcPlaneAngleMeasure(
+                                                                      2 * PI));
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                geometricRepresentationContext,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                shell);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy shellProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .objectPlacement(new IfcLocalPlacement(null,
+                                                               objPosition))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        //TODO: instead of IfcProxy, use a suitable IfcProduct for each Eywa
+        // primitive (when possible)
+        geometries.add(shellProxy);
     }
 
     /**
