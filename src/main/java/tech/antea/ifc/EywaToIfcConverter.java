@@ -32,6 +32,8 @@ import buildingsmart.io.Attribute;
 import buildingsmart.io.Header;
 import buildingsmart.io.InverseRelationship;
 import buildingsmart.io.Serializer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.imc.persistence.po.eytukan.*;
 import lombok.NonNull;
 
@@ -48,24 +50,48 @@ public class EywaToIfcConverter implements EywaConverter {
     private static final String PROGRAM_NAME = "Antea IFC Export";
     private static final String PROGRAM_VERSION = "0.0.1-SNAPSHOT";
     private static final String PROGRAM_ID = "com.anteash:ifc";
+    private static final ObjectMapper jsonMapper = new ObjectMapper();
+    /**
+     * Representation context for all geometries.
+     */
+    private static final IfcGeometricRepresentationContext
+            GEOMETRIC_REPRESENTATION_CONTEXT;
+
+    static {
+        IfcAxis2Placement3D worldCoordinateSystem =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0, 0, 1),
+                                        new IfcDirection(1, 0, 0));
+        GEOMETRIC_REPRESENTATION_CONTEXT =
+                new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
+                                                      new IfcLabel("Model"),
+                                                      new IfcDimensionCount(3),
+                                                      new IfcReal(1.E-08),
+                                                      worldCoordinateSystem,
+                                                      null);
+    }
 
     /**
      * Owner history for all {@link IfcRoot} objects in this project.
      */
     private final IfcOwnerHistory ownerHistory;
-    private final IfcGeometricRepresentationContext
-            geometricRepresentationContext;
     /**
-     * The set containing the conversion of all Eywa geometries.
+     * The set containing the converted Eywa geometries.
      */
-    private final Set<IfcProduct> geometries;
+    private final Set<IfcProduct> geometries = new HashSet<>();
     /**
      * Maps each Primitive in the Eywa tree to its position relative to the
      * world coordinate system.
      */
-    private final Map<Primitive, IfcAxis2Placement3D> objPositions;
+    private final Map<Primitive, IfcAxis2Placement3D> objPositions =
+            new HashMap<>();
     private Map<String, Object> hints;
 
+    /**
+     * Initializes {@code this.ownerHistory} because this field will be needed
+     * when creating the IfcProducts that represent instances of Eywa
+     * Primitives.
+     */
     public EywaToIfcConverter() {
         IfcPerson person =
                 IfcPerson.builder().givenName(new IfcLabel("")).build();
@@ -92,24 +118,6 @@ public class EywaToIfcConverter implements EywaConverter {
                                                 personAndOrganization,
                                                 application,
                                                 currentTime);
-        IfcAxis2Placement3D worldCoordinateSystem =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
-        this.geometricRepresentationContext =
-                new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
-                                                      new IfcLabel("Model"),
-                                                      new IfcDimensionCount(3),
-                                                      //TODO: decide what
-                                                      // precision to use
-                                                      new IfcReal(1.E-05),
-                                                      worldCoordinateSystem,
-                                                      new IfcDirection(0,
-                                                                       1,
-                                                                       0));
-
-        this.geometries = new HashSet<>();
-        this.objPositions = new HashMap<>();
     }
 
     /**
@@ -232,15 +240,15 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     public static void writeToFile(IfcProject project, @NonNull File output)
             throws IOException {
-        Header header = new Header().setAuthor(COMPANY_NAME)
-                .setDescription("ViewDefinition [CoordinationView]")
-                .setOrganization(COMPANY_NAME)
-                .setOriginatingSystem(PROGRAM_NAME + " " + PROGRAM_VERSION);
+        Header header =
+                new Header().setDescription("ViewDefinition [CoordinationView]")
+                        .setOrganization(COMPANY_NAME).setOriginatingSystem(
+                        PROGRAM_NAME + " " + PROGRAM_VERSION);
         new Serializer().serialize(header, project, output);
     }
 
     /**
-     * @param matrix An array representing a 4x4 matrix in row-major order.
+     * @param matrix An array representing a 4x4 matrix in column-major order.
      * @param vector A 4-dimensional vector.
      * @return A 4-dimensional vector that is result of the matrix
      * multiplication matrix * vector.
@@ -260,13 +268,32 @@ public class EywaToIfcConverter implements EywaConverter {
             throw new IllegalArgumentException("vector must have 4 elements");
         }
         double[] result = new double[4];
-        for (int i = 0; i < 4; i++) { // iterates on rows of matrix
+        for (int i = 0; i < 4; i++) { // row index
             result[i] = 0;
-            for (int j = 0; j < 4; j++) { // iterates on columns of matrix
-                result[i] += matrix[i * 4 + j] * vector[j];
+            for (int j = 0; j < 4; j++) { // column index
+                result[i] += matrix[i + j * 4] * vector[j];
             }
         }
         return result;
+    }
+
+    /**
+     * @param obj The object for which to return the description.
+     * @return The {@code description} field of {@code obj} in the JSON format.
+     *
+     * @throws NullPointerException If {@code obj} is {@code null}.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
+     */
+    private static String getDescription(@NonNull Primitive obj) {
+        Map<String, Object> description = obj.getDescription();
+        try {
+            return jsonMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(description);
+        } catch (JsonProcessingException e) {
+            throw new ConversionException(e);
+        }
     }
 
     /**
@@ -296,7 +323,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 IfcProject.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory).name(new IfcLabel(
                         projectName == null ? "Unnamed" : projectName))
-                        .representationContext(geometricRepresentationContext)
+                        .representationContext(GEOMETRIC_REPRESENTATION_CONTEXT)
                         .unitsInContext(unitAssignment).build();
 
         IfcSite ifcSite = IfcSite.builder().globalId(new IfcGloballyUniqueId())
@@ -329,25 +356,18 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
-     * Computes the location of {@code obj} and adds it to {@code objPosition}.
+     * Resolves the location of {@code obj} and adds it to {@code objPosition}.
      *
-     * @param obj The object of which to compute the absolute location.
+     * @param obj The object of which to resolve the absolute location.
      * @return The location of the object relative to the world coordinate
      * system.
      *
      * @throws NullPointerException     If obj is {@code null}.
-     * @throws IllegalArgumentException If {@code obj} doesn't have a matrix
-     *                                  field.
+     * @throws IllegalArgumentException If in {@code obj} the matrix field is
+     *                                  not set and the rotation field is.
      */
-    private IfcAxis2Placement3D computeLocation(@NonNull Primitive obj) {
-        Double[] matrix = obj.getMatrix();
-        if (matrix == null) {
-            throw new IllegalArgumentException(
-                    "Only conversion of objects whose position is defined" +
-                            " with a matrix is supported at the moment");
-            // TODO: implement conversion of Primitives using position and
-            //  rotation
-        }
+    private IfcAxis2Placement3D resolveLocation(@NonNull Primitive obj) {
+        IfcAxis2Placement3D objPosition;
         IfcAxis2Placement3D parentPosition = objPositions.get(obj.getParent());
         if (parentPosition == null) {
             // obj is the root object
@@ -356,34 +376,68 @@ public class EywaToIfcConverter implements EywaConverter {
                                             new IfcDirection(0, 0, 1),
                                             new IfcDirection(1, 0, 0));
         }
-        double[] location = new double[4];
-        double[] axis = new double[4];
-        double[] refDir = new double[4];
-        List<IfcLengthMeasure> locationCoordinates =
-                parentPosition.getLocation().getCoordinates();
-        List<IfcReal> axisCoordinates =
-                parentPosition.getP().get(2).getDirectionRatios(); // z axis
-        List<IfcReal> refDirectionCoordinates =
-                parentPosition.getP().get(0).getDirectionRatios(); // x axis
-        for (int i = 0; i < locationCoordinates.size(); i++) {
-            location[i] = locationCoordinates.get(i).getValue();
-            axis[i] = axisCoordinates.get(i).getValue();
-            refDir[i] = refDirectionCoordinates.get(i).getValue();
-        }
-        location[3] = 1; // indicates that location is a position
-        axis[3] = 0;
-        refDir[3] = 0; // axis and refDir are directions
 
-        double[] newLocation = new double[3];
-        double[] newAxis = new double[3];
-        double[] newRefDirection = new double[3];
-        System.arraycopy(multiply(matrix, location), 0, newLocation, 0, 3);
-        System.arraycopy(multiply(matrix, axis), 0, newAxis, 0, 3);
-        System.arraycopy(multiply(matrix, refDir), 0, newRefDirection, 0, 3);
-        IfcAxis2Placement3D objPosition =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
-                                        new IfcDirection(newAxis),
-                                        new IfcDirection(newRefDirection));
+        if (obj.getMatrix() != null) {
+            Double[] matrix = obj.getMatrix();
+            double[] location = new double[4];
+            double[] axis = new double[4];
+            double[] refDir = new double[4];
+            List<IfcLengthMeasure> locationCoordinates =
+                    parentPosition.getLocation().getCoordinates();
+            List<IfcReal> axisCoordinates =
+                    parentPosition.getP().get(2).getDirectionRatios(); // z axis
+            List<IfcReal> refDirectionCoordinates =
+                    parentPosition.getP().get(0).getDirectionRatios(); // x axis
+            for (int i = 0; i < locationCoordinates.size(); i++) {
+                location[i] = locationCoordinates.get(i).getValue();
+                axis[i] = axisCoordinates.get(i).getValue();
+                refDir[i] = refDirectionCoordinates.get(i).getValue();
+            }
+            location[3] = 1; // indicates that location is a position
+            axis[3] = 0;
+            refDir[3] = 0; // axis and refDir are directions
+
+            double[] newLocation = new double[3];
+            double[] newAxis = new double[3];
+            double[] newRefDirection = new double[3];
+            System.arraycopy(multiply(matrix, location), 0, newLocation, 0, 3);
+            System.arraycopy(multiply(matrix, axis), 0, newAxis, 0, 3);
+            System.arraycopy(multiply(matrix, refDir),
+                             0,
+                             newRefDirection,
+                             0,
+                             3);
+            objPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
+                                            new IfcDirection(newAxis),
+                                            new IfcDirection(newRefDirection));
+        } else if (obj.getRotationArray() != null &&
+                !(Arrays.equals(obj.getRotationArray(),
+                                new Double[]{0d, 0d, 0d}) ||
+                        Arrays.equals(obj.getRotationArray(),
+                                      new Double[]{-0d, -0d, -0d}))) {
+            throw new IllegalArgumentException(
+                    "conversion of objects with both position and " +
+                            "rotation set is currently not supported");
+            // TODO: implement conversion of Primitives using rotation
+        } else {
+            Double[] position = obj.getPosition();
+            if (position == null) {
+                position = new Double[]{0d, 0d, 0d};
+            }
+
+            double[] location =
+                    parentPosition.getLocation().getCoordinates().stream()
+                            .mapToDouble(IfcLengthMeasure::getValue).toArray();
+            double[] newLocation = new double[]{location[0] + position[0],
+                                                location[1] + position[1],
+                                                location[2] + position[2]};
+
+            objPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
+                                            parentPosition.getAxis(),
+                                            parentPosition.getRefDirection());
+        }
         objPositions.put(obj, objPosition);
         return objPosition;
     }
@@ -393,7 +447,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Beam obj) {
+    public void addObject(@NonNull Beam obj) {
 
     }
 
@@ -402,7 +456,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Blind obj) {
+    public void addObject(@NonNull Blind obj) {
 
     }
 
@@ -411,7 +465,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Box obj) {
+    public void addObject(@NonNull Box obj) {
 
     }
 
@@ -420,7 +474,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Collar obj) {
+    public void addObject(@NonNull Collar obj) {
 
     }
 
@@ -429,7 +483,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Curve obj) {
+    public void addObject(@NonNull Curve obj) {
 
     }
 
@@ -438,7 +492,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Dielectric obj) {
+    public void addObject(@NonNull Dielectric obj) {
 
     }
 
@@ -447,7 +501,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Dish obj) {
+    public void addObject(@NonNull Dish obj) {
 
     }
 
@@ -456,7 +510,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(DualExpansionJoint obj) {
+    public void addObject(@NonNull DualExpansionJoint obj) {
 
     }
 
@@ -465,7 +519,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(EccentricCone obj) {
+    public void addObject(@NonNull EccentricCone obj) {
 
     }
 
@@ -474,8 +528,8 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Empty obj) {
-        computeLocation(obj);
+    public void addObject(@NonNull Empty obj) {
+        resolveLocation(obj);
     }
 
     /**
@@ -483,7 +537,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Endplate obj) {
+    public void addObject(@NonNull Endplate obj) {
 
     }
 
@@ -492,7 +546,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(ExpansionJoint obj) {
+    public void addObject(@NonNull ExpansionJoint obj) {
 
     }
 
@@ -501,7 +555,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(FaceSet obj) {
+    public void addObject(@NonNull FaceSet obj) {
 
     }
 
@@ -510,7 +564,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(FourWaysValve obj) {
+    public void addObject(@NonNull FourWaysValve obj) {
 
     }
 
@@ -519,7 +573,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Instrument obj) {
+    public void addObject(@NonNull Instrument obj) {
 
     }
 
@@ -528,7 +582,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Ladder obj) {
+    public void addObject(@NonNull Ladder obj) {
 
     }
 
@@ -537,7 +591,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Mesh obj) {
+    public void addObject(@NonNull Mesh obj) {
 
     }
 
@@ -546,7 +600,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Nozzle obj) {
+    public void addObject(@NonNull Nozzle obj) {
 
     }
 
@@ -555,7 +609,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(OrthoValve obj) {
+    public void addObject(@NonNull OrthoValve obj) {
 
     }
 
@@ -564,7 +618,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(RectangularBlind obj) {
+    public void addObject(@NonNull RectangularBlind obj) {
 
     }
 
@@ -573,7 +627,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(RectangularEndplate obj) {
+    public void addObject(@NonNull RectangularEndplate obj) {
 
     }
 
@@ -582,7 +636,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(RectangularFlange obj) {
+    public void addObject(@NonNull RectangularFlange obj) {
 
     }
 
@@ -591,7 +645,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(RectangularPlate obj) {
+    public void addObject(@NonNull RectangularPlate obj) {
 
     }
 
@@ -600,7 +654,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(RectangularShell obj) {
+    public void addObject(@NonNull RectangularShell obj) {
 
     }
 
@@ -609,25 +663,31 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Ring obj) {
+    public void addObject(@NonNull Ring obj) {
 
     }
 
     /**
      * @param obj The {@link Shell} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
-    public void addObject(Shell obj) {
-        IfcAxis2Placement3D objPosition = computeLocation(obj);
-        //creating a parallelogram that is the vertical section of the shell
+    public void addObject(@NonNull Shell obj) {
+        IfcAxis2Placement3D objPosition = resolveLocation(obj);
+        //creating a parallelogram that is the right part of the vertical
+        // section of the shell
         double height = obj.getLength();
         double radiusDifference = obj.getRadius1() - obj.getRadius2();
         double side =
                 sqrt((height * height) + (radiusDifference * radiusDifference));
+        //TODO: convert lining as a separate solid with a different color
+        // (green) for all Primitives
+        double base = obj.getThickness() + obj.getLining();
         // alfa is the bottom right angle of the parallelogram
         double sinAlfa = height / side;
-        double base = obj.getThickness() / sinAlfa;
         double topBaseOffset;
         if (obj.getRadius2() < obj.getRadius1()) {
             // if the top base is shifted left compared to the bottom base,
@@ -680,7 +740,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                               new IfcPlaneAngleMeasure(
                                                                       2 * PI));
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
-                geometricRepresentationContext,
+                GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
                 shell);
@@ -690,6 +750,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
                         .objectPlacement(new IfcLocalPlacement(null,
                                                                objPosition))
                         .representation(productDefinitionShape)
@@ -704,7 +765,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Sphere obj) {
+    public void addObject(@NonNull Sphere obj) {
 
     }
 
@@ -713,7 +774,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Stair obj) {
+    public void addObject(@NonNull Stair obj) {
 
     }
 
@@ -722,7 +783,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Sweep obj) {
+    public void addObject(@NonNull Sweep obj) {
 
     }
 
@@ -731,7 +792,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(TankShell obj) {
+    public void addObject(@NonNull TankShell obj) {
 
     }
 
@@ -740,7 +801,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Tee obj) {
+    public void addObject(@NonNull Tee obj) {
 
     }
 
@@ -749,7 +810,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(ThreeWaysValve obj) {
+    public void addObject(@NonNull ThreeWaysValve obj) {
 
     }
 
@@ -758,7 +819,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws NullPointerException If {@code obj} is null.
      */
     @Override
-    public void addObject(Valve obj) {
+    public void addObject(@NonNull Valve obj) {
 
     }
 }

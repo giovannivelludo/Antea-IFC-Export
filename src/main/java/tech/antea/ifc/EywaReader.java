@@ -111,6 +111,7 @@ public class EywaReader {
      * @throws IllegalArgumentException If {@code eywaRoot.metadata.use} exists
      *                                  and is not {@code view}, if {@code
      *                                  eywaRoot.object} is {@code null}.
+     * @throws ConversionException      If an error occurs during conversion.
      */
     public void convert(@NonNull EywaRoot eywaRoot) {
         if (eywaRoot.getMetadata() != null &&
@@ -134,6 +135,7 @@ public class EywaReader {
      * @param obj The {@link Primitive} for which to pass all descendants to the
      *            {@code builder} provided in the constructor.
      * @throws NullPointerException If {@code obj} is {@code null}.
+     * @throws ConversionException  If an error occurs during conversion.
      */
     private void addChildren(@NonNull Primitive obj) {
         obj.getChildren().forEach(child -> builderMethod.get(child.getClass())
@@ -143,6 +145,8 @@ public class EywaReader {
 
     /**
      * @return The result of the conversion.
+     *
+     * @throws ConversionException If an error occurs during conversion.
      */
     public Object getResult() {
         return builder.getResult();
