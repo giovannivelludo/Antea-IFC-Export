@@ -27,7 +27,7 @@
 
 package tech.antea.ifc;
 
-import buildingsmart.ifc.IfcProject;
+import buildingsmart.ifc.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
@@ -80,6 +80,30 @@ public class EywaToIfcConverterTest {
      */
     @Test
     public void convert_Shell() throws IOException {
+        URL file = r.getResourcesWithLeafName("shell.eywa").getURLs().get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/shell.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcRelDecomposes projectDecomposer =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite site =
+                (IfcSite) projectDecomposer.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure geometriesContainer =
+                site.getContainsElements().iterator().next();
+
+        IfcProduct shell =
+                geometriesContainer.getRelatedElements().iterator().next();
+
         String expectedDataSection =
                 "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
                         "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
@@ -87,8 +111,9 @@ public class EywaToIfcConverterTest {
                         "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
                         "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
                         "Export'," + "'com.anteash:ifc');\n" +
-                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.,1597684536,#4,#5," +
-                        "1597684536);\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
                         "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
                         "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
                         "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
@@ -102,10 +127,11 @@ public class EywaToIfcConverterTest {
                         "\n" +
                         "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
                         "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
-                        "#17=IFCPROJECT('0Hiq9iJbPBIQHYPaPWguV7',#6," +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," +
                         "'05-ML-120-0-013-1/2\"-02A-V',$,$,$,$,(#11),#16);\n" +
-                        "#18=IFCSITE('3OtI0RU8b9O9t1xqlB1OK9',#6,$,$,$,$,$,$," +
-                        ".COMPLEX" + ".,$,$,$,$,$);\n" +
+                        "#18=IFCSITE(" + site.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
                         "#19=IFCCARTESIANPOINT((150841.07,127501.77,1118.74))" +
                         ";\n" + "#20=IFCAXIS2PLACEMENT3D(#19,#8,#9);\n" +
                         "#21=IFCLOCALPLACEMENT($,#20);\n" +
@@ -123,8 +149,8 @@ public class EywaToIfcConverterTest {
                         "#31=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
                         "(#30));\n" +
                         "#32=IFCPRODUCTDEFINITIONSHAPE($,$,(#31));\n" +
-                        "#33=IFCPROXY('0DUyVF9wD6SOUxi04KcZbQ',#6,'Shell'," +
-                        "'{\\X\\0A  " +
+                        "#33=IFCPROXY(" + shell.getGlobalId().serialize() +
+                        ",#6,'Shell'," + "'{\\X\\0A  " +
                         "\"CATEGORY\" : \"TUBTUBI\",\\X\\0A  \"ADESCR\" : " +
                         "\"TB5293154\",\\X\\0A  \"NCOR_ALLOW\" : 3,\\X\\0A  " +
                         "\"NDIAMETRO\" : 21.34,\\X\\0A  \"ASCHEDULE\" : " +
@@ -137,21 +163,13 @@ public class EywaToIfcConverterTest {
                         ".78,\\X\\0A" +
                         "  \"NLUNGHEZZA\" : 229.420999999988\\X\\0A}',$,#21," +
                         "#32," + ".PRODUCT.,$);\n" +
-                        "#34=IFCRELCONTAINEDINSPATIALSTRUCTURE" +
-                        "('27BALpyVbDCBeXvG6U9quW',#6,'Site to geometries " +
-                        "link',$," + "(#33),#18);\n" +
-                        "#35=IFCRELAGGREGATES('3DIJT_BRjCI8aeNrxDRiU5',#6," +
+                        "#34=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        geometriesContainer.getGlobalId().serialize() +
+                        ",#6,'Site to geometries " + "link',$," +
+                        "(#33),#18);\n" + "#35=IFCRELAGGREGATES(" +
+                        projectDecomposer.getGlobalId().serialize() + ",#6," +
                         "'Project to" + " site link',$,#17,(#18));\n" +
                         "ENDSEC;\n";
-        URL file = r.getResourcesWithLeafName("shell.eywa").getURLs().get(0);
-        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
-
-        EywaToIfcConverter builder = new EywaToIfcConverter();
-        EywaReader reader = new EywaReader(builder);
-        reader.convert(eywaRoot);
-        IfcProject result = builder.getResult();
-        String filePath = "./ifc-out/shell.ifc";
-        EywaToIfcConverter.writeToFile(result, filePath);
 
         String ifcDataSection = getDataSection(filePath);
         Assert.assertEquals(expectedDataSection, ifcDataSection);
