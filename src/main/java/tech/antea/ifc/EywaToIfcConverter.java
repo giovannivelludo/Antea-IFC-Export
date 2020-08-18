@@ -102,6 +102,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .roles(Collections.singletonList(anteaRole)).build();
         IfcPersonAndOrganization personAndOrganization =
                 new IfcPersonAndOrganization(person, organization, null);
+        IfcApplication.clearUniqueConstraint();
         IfcApplication application = new IfcApplication(organization,
                                                         new IfcLabel(
                                                                 PROGRAM_VERSION),
@@ -457,7 +458,111 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Blind obj) {
+        IfcAxis2Placement3D objPosition = resolveLocation(obj);
+        IfcRepresentationItem blind;
+        IfcLabel representationType;
+        if (obj.getCrownRadius() == null) {
+            // there's no plate
+            IfcAxis2Placement2D basePlacement =
+                    new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
+                                            new IfcDirection(1, 0));
+            IfcCircleProfileDef blindBase = new IfcCircleProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    basePlacement,
+                    new IfcPositiveLengthMeasure(obj.getRadius()));
+            IfcAxis2Placement3D blindPlacement =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            blind = new IfcExtrudedAreaSolid(blindBase,
+                                             blindPlacement,
+                                             new IfcDirection(0, 0, 1),
+                                             new IfcLengthMeasure(obj.getCrownThickness()));
+            representationType = new IfcLabel("SweptSolid");
+        } else {
+            // TODO: find how to calculate plateThickness
+            double plateThickness = obj.getCrownThickness() / 5;
+            // parameters of the bottom cylinder, usually the disc, but when
+            // switched == true it's the plate
+            double bottomThickness;
+            double bottomRadius;
+            // parameters of the top cylinder, which is usually the plate, but
+            // when switched == true it's the disc
+            double topThickness;
+            double topRadius;
+            if (!obj.isSwitched()) {
+                topThickness = plateThickness;
+                topRadius = obj.getRadius();
+                bottomThickness = obj.getCrownThickness();
+                bottomRadius = obj.getCrownRadius();
+            } else {
+                topThickness = obj.getCrownThickness();
+                topRadius = obj.getCrownRadius();
+                bottomThickness = plateThickness;
+                bottomRadius = obj.getRadius();
+            }
+            IfcAxis2Placement2D cylinderBasePlacement = new IfcAxis2Placement2D(
+                    new IfcCartesianPoint(0, 0),
+                    new IfcDirection(1, 0));
 
+            IfcCircleProfileDef bottomBase = new IfcCircleProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    cylinderBasePlacement,
+                    new IfcPositiveLengthMeasure(bottomRadius));
+            IfcAxis2Placement3D bottomCylinderPlacement =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            IfcExtrudedAreaSolid bottomCylinder = new IfcExtrudedAreaSolid(
+                    bottomBase,
+                    bottomCylinderPlacement,
+                    new IfcDirection(0, 0, 1),
+                    new IfcLengthMeasure(bottomThickness));
+
+            IfcCircleProfileDef topBase = new IfcCircleProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    cylinderBasePlacement,
+                    new IfcPositiveLengthMeasure(topRadius));
+            IfcAxis2Placement3D topCylinderPlacement =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                                  0,
+                                                                  bottomThickness),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            IfcExtrudedAreaSolid topCylinder = new IfcExtrudedAreaSolid(topBase,
+                                                                        topCylinderPlacement,
+                                                                        new IfcDirection(
+                                                                                0,
+                                                                                0,
+                                                                                1),
+                                                                        new IfcLengthMeasure(
+                                                                                topThickness));
+
+            blind = new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                         bottomCylinder,
+                                         topCylinder);
+            representationType = new IfcLabel("CSG");
+        }
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                representationType,
+                blind);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy blindProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(new IfcLocalPlacement(null,
+                                                               objPosition))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(blindProxy);
     }
 
     /**

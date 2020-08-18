@@ -93,16 +93,16 @@ public class EywaToIfcConverterTest {
         IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
         IfcTimeStamp modifiedDate =
                 result.getOwnerHistory().getLastModifiedDate();
-        IfcRelDecomposes projectDecomposer =
+        IfcRelDecomposes ifcRelAggregates =
                 result.getIsDecomposedBy().iterator().next();
-        IfcSite site =
-                (IfcSite) projectDecomposer.getRelatedObjects().iterator()
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
                         .next();
-        IfcRelContainedInSpatialStructure geometriesContainer =
-                site.getContainsElements().iterator().next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
 
-        IfcProduct shell =
-                geometriesContainer.getRelatedElements().iterator().next();
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
 
         String expectedDataSection =
                 "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
@@ -130,7 +130,7 @@ public class EywaToIfcConverterTest {
                         "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
                         ",#6," +
                         "'05-ML-120-0-013-1/2\"-02A-V',$,$,$,$,(#11),#16);\n" +
-                        "#18=IFCSITE(" + site.getGlobalId().serialize() +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
                         ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
                         "#19=IFCCARTESIANPOINT((150841.07,127501.77,1118.74))" +
                         ";\n" + "#20=IFCAXIS2PLACEMENT3D(#19,#8,#9);\n" +
@@ -149,7 +149,7 @@ public class EywaToIfcConverterTest {
                         "#31=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
                         "(#30));\n" +
                         "#32=IFCPRODUCTDEFINITIONSHAPE($,$,(#31));\n" +
-                        "#33=IFCPROXY(" + shell.getGlobalId().serialize() +
+                        "#33=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
                         ",#6,'Shell'," + "'{\\X\\0A  " +
                         "\"CATEGORY\" : \"TUBTUBI\",\\X\\0A  \"ADESCR\" : " +
                         "\"TB5293154\",\\X\\0A  \"NCOR_ALLOW\" : 3,\\X\\0A  " +
@@ -164,10 +164,107 @@ public class EywaToIfcConverterTest {
                         "  \"NLUNGHEZZA\" : 229.420999999988\\X\\0A}',$,#21," +
                         "#32," + ".PRODUCT.,$);\n" +
                         "#34=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
-                        geometriesContainer.getGlobalId().serialize() +
-                        ",#6,'Site to geometries " + "link',$," +
-                        "(#33),#18);\n" + "#35=IFCRELAGGREGATES(" +
-                        projectDecomposer.getGlobalId().serialize() + ",#6," +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() + ",#6,'Site to geometries " +
+                        "link',$," + "(#33),#18);\n" + "#35=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() + ",#6," +
+                        "'Project to" + " site link',$,#17,(#18));\n" +
+                        "ENDSEC;\n";
+
+        String ifcDataSection = getDataSection(filePath);
+        Assert.assertEquals(expectedDataSection, ifcDataSection);
+    }
+
+    /**
+     * Tests the conversion of an EywaRoot containing only one Blind.
+     */
+    @Test
+    public void convert_Blind() throws IOException {
+        URL file = r.getResourcesWithLeafName("blind.eywa").getURLs().get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/blind.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcRelDecomposes ifcRelAggregates =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
+
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
+
+        String expectedDataSection =
+                "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
+                        "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
+                        "#3=IFCORGANIZATION($,'Antea',$,(#2),$);\n" +
+                        "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
+                        "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
+                        "Export'," + "'com.anteash:ifc');\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
+                        "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
+                        "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
+                        "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
+                        "#10=IFCAXIS2PLACEMENT3D(#7,#8,#9);\n" +
+                        "#11=IFCGEOMETRICREPRESENTATIONCONTEXT('Plan'," +
+                        "'Model',3,1" + ".0E-8,#10,$);\n" +
+                        "#12=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);\n" +
+                        "#13=IFCSIUNIT(*,.AREAUNIT.,.MILLI.,.SQUARE_METRE.);" +
+                        "\n" +
+                        "#14=IFCSIUNIT(*,.VOLUMEUNIT.,.MILLI.,.CUBIC_METRE.);" +
+                        "\n" +
+                        "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
+                        "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
+                        "#19=IFCCARTESIANPOINT((150897.92,115859.01,1300.89))" +
+                        ";\n" + "#20=IFCDIRECTION((-1.0,0.0,0.0));\n" +
+                        "#21=IFCDIRECTION((0.0,0.0,-1.0));\n" +
+                        "#22=IFCAXIS2PLACEMENT3D(#19,#20,#21);\n" +
+                        "#23=IFCLOCALPLACEMENT($,#22);\n" +
+                        "#24=IFCCARTESIANPOINT((0.0,0.0));\n" +
+                        "#25=IFCDIRECTION((1.0,0.0));\n" +
+                        "#26=IFCAXIS2PLACEMENT2D(#24,#25);\n" +
+                        "#27=IFCCIRCLEPROFILEDEF(.AREA.,$,#26,320.68);\n" +
+                        "#28=IFCEXTRUDEDAREASOLID(#27,#10,#8,85.85);\n" +
+                        "#29=IFCCIRCLEPROFILEDEF(.AREA.,$,#26,177.8);\n" +
+                        "#30=IFCCARTESIANPOINT((0.0,0.0,85.85));\n" +
+                        "#31=IFCAXIS2PLACEMENT3D(#30,#8,#9);\n" +
+                        "#32=IFCEXTRUDEDAREASOLID(#29,#31,#8,17" +
+                        ".169999999999998);\n" +
+                        "#33=IFCBOOLEANRESULT(.UNION.,#28,#32);\n" +
+                        "#34=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#33));" +
+                        "\n" + "#35=IFCPRODUCTDEFINITIONSHAPE($,$,(#34));\n" +
+                        "#36=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Blind'," + "'{\\X\\0A  " +
+                        "\"CATEGORY\" : \"APPFLANGE\",\\X\\0A  \"ADESCR\" : " +
+                        "\"Cieca\",\\X\\0A  \"NDIAMETRO\" : 355.6,\\X\\0A  " +
+                        "\"ITIPO_STD\" : \"0-ANSI\",\\X\\0A  " +
+                        "\"ITIPO_FAMSPEC\" : " +
+                        "\"\",\\X\\0A  \"NDIAM_CORONA\" : 641.35,\\X\\0A  " +
+                        "\"NSPESS\" " +
+                        ": 85.85,\\X\\0A  \"ITIPO_FLANGIA\" : " +
+                        "\"100-CIECA\"\\X\\0A}'," +
+                        "$,#23,#35,.PRODUCT.,$);\n" +
+                        "#37=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() + ",#6,'Site to geometries " +
+                        "link',$," + "(#36),#18);\n" + "#38=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() + ",#6," +
                         "'Project to" + " site link',$,#17,(#18));\n" +
                         "ENDSEC;\n";
 

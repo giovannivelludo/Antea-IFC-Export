@@ -1,0 +1,51 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Blind",
+        "radius": 177.80,
+        "crownRadius": 320.68,
+        "crownThickness": 85.85,
+        "imId": 1169185533,
+        "name": "Cieca",
+        "description": {
+          "CATEGORY": "APPFLANGE",
+          "ADESCR": "Cieca",
+          "NDIAMETRO": 355.6,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "NDIAM_CORONA": 641.35,
+          "NSPESS": 85.85,
+          "ITIPO_FLANGIA": "100-CIECA"
+        },
+        "matrix": [
+          0.00,
+          0.00,
+          -1.00,
+          0.00,
+          0.00,
+          -1.00,
+          0.00,
+          0.00,
+          -1.00,
+          0.00,
+          0.00,
+          0.00,
+          150897.92,
+          115859.01,
+          1300.89,
+          1.00
+        ]
+      }
+    ]
+  }
+}
