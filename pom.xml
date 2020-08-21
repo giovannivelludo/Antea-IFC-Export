@@ -104,7 +104,7 @@
             <dependency>
                 <groupId>com.anteash</groupId>
                 <artifactId>IFC.JAVA</artifactId>
-                <version>0.1-SNAPSHOT</version>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

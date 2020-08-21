@@ -589,7 +589,107 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Curve obj) {
+        IfcAxis2Placement3D objPosition = resolveLocation(obj);
+        Double radius1 = obj.getRadius1();
+        Double radius2 = obj.getRadius2();
+        if (obj.getRadius() != null) {
+            radius1 = obj.getRadius();
+            radius2 = obj.getRadius();
+        }
+        double wallThickness = obj.getThickness() + obj.getLining();
 
+        //creating the spineCurve
+        IfcAxis2Placement3D circumferencePlacement =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(1, 0, 0),
+                                        new IfcDirection(0, 1, 0));
+        IfcCircle circumference = new IfcCircle(circumferencePlacement,
+                                                new IfcPositiveLengthMeasure(obj.getCurveRadius()));
+        Set<IfcTrimmingSelect> trim1 =
+                Collections.singleton(new IfcParameterValue(0));
+        Set<IfcTrimmingSelect> trim2 =
+                Collections.singleton(new IfcParameterValue(obj.getAngle()));
+        IfcTrimmedCurve parentCurve = new IfcTrimmedCurve(circumference,
+                                                          trim1,
+                                                          trim2,
+                                                          new IfcBoolean(true),
+                                                          IfcTrimmingPreference.PARAMETER);
+        IfcCompositeCurveSegment segment = new IfcCompositeCurveSegment(
+                IfcTransitionCode.DISCONTINUOUS,
+                true,
+                parentCurve);
+        List<IfcCompositeCurveSegment> segments =
+                Collections.singletonList(segment);
+        IfcCompositeCurve spineCurve =
+                new IfcCompositeCurve(segments, new IfcLogical(false));
+
+        // creating the two crossSections
+        IfcAxis2Placement2D circlePosition =
+                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
+                                        new IfcDirection(1, 0));
+        IfcCircleHollowProfileDef circle1 = new IfcCircleHollowProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                circlePosition,
+                new IfcPositiveLengthMeasure(radius1),
+                new IfcPositiveLengthMeasure(wallThickness));
+        IfcCircleHollowProfileDef circle2 = new IfcCircleHollowProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                circlePosition,
+                new IfcPositiveLengthMeasure(radius2),
+                new IfcPositiveLengthMeasure(wallThickness));
+        List<IfcProfileDef> crossSections = Arrays.asList(circle1, circle2);
+
+        // creating the two crossSectionPositions
+        //TODO: right now cartesian points and direction are given relatively
+        // to circumferencePlacement, check if that's right or if they should be
+        // given relative to the placement of the object
+        IfcAxis2Placement3D position1 =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(obj.getCurveRadius(),
+                                                              0,
+                                                              0),
+                                        new IfcDirection(0, 1, 0),
+                                        new IfcDirection(0, 0, 1));
+        // angolo asse z'' == obj.angle + PI/2
+        IfcAxis2Placement3D position2 =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(
+                        obj.getCurveRadius() * cos(obj.getAngle()),
+                        obj.getCurveRadius() * sin(obj.getAngle()),
+                        0),
+                                        new IfcDirection(cos(
+                                                obj.getAngle() + PI / 2),
+                                                         sin(obj.getAngle() +
+                                                                     PI / 2),
+                                                         0),
+                                        new IfcDirection(0, 0, 1));
+        List<IfcAxis2Placement3D> crossSectionPositions =
+                Arrays.asList(position1, position2);
+
+        //FIXME: IfcSectionedSpine is not included in the Coordination View
+        // MVD, so it's likely that most CAD applications won't be able to
+        // render it, this also makes this method not testable at the moment
+        IfcSectionedSpine curve = new IfcSectionedSpine(spineCurve,
+                                                        crossSections,
+                                                        crossSectionPositions);
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SectionedSpine"),
+                curve);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy curveProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(new IfcLocalPlacement(null,
+                                                               objPosition))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(curveProxy);
     }
 
     /**

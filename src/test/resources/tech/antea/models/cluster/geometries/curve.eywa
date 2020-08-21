@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Curve",
+        "imId": 1169128631,
+        "name": "Curva",
+        "radius": 16.70,
+        "length": 29.92,
+        "thickness": 4.55,
+        "lining": 0.00,
+        "curveRadius": 38.10,
+        "angle": 0.79,
+        "description": {
+          "CATEGORY": "TUBCURVE",
+          "ADESCR": "New",
+          "NANGOLO": 45.0000010633437,
+          "NDIAMETRO": 33.4,
+          "ASCHEDULE": "80",
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "AGRUPPO_SCH": "A08",
+          "NRAGGIO": 38.1000000000058,
+          "NSPESS": 4.55,
+          "NLUNGHEZZA": 29.9236707325395,
+          "ITIPO_CURVA": "2-CURVA_LST"
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}
