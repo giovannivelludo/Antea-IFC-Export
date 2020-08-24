@@ -596,7 +596,7 @@ public class EywaToIfcConverter implements EywaConverter {
             radius1 = obj.getRadius();
             radius2 = obj.getRadius();
         }
-        double wallThickness = obj.getThickness() + obj.getLining();
+        double wallThickness = obj.getThickness();
 
         //creating the spineCurve
         IfcAxis2Placement3D circumferencePlacement =
@@ -668,7 +668,10 @@ public class EywaToIfcConverter implements EywaConverter {
 
         //FIXME: IfcSectionedSpine is not included in the Coordination View
         // MVD, so it's likely that most CAD applications won't be able to
-        // render it, this also makes this method not testable at the moment
+        // render it, this also makes this method not testable at the moment.
+        // IfcSweptDiskSolid can be used when radius1 == radius2, otherwise
+        // an IfcManifoldSolidBrep is needed, this will cause the shape to be
+        // approximated using polygons.
         IfcSectionedSpine curve = new IfcSectionedSpine(spineCurve,
                                                         crossSections,
                                                         crossSectionPositions);
@@ -890,7 +893,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 sqrt((height * height) + (radiusDifference * radiusDifference));
         //TODO: convert lining as a separate solid with a different color
         // (green) for all Primitives
-        double base = obj.getThickness() + obj.getLining();
+        double base = obj.getThickness();
         // alfa is the bottom right angle of the parallelogram
         double sinAlfa = height / side;
         double topBaseOffset;
