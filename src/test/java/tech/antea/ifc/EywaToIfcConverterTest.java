@@ -100,7 +100,6 @@ public class EywaToIfcConverterTest {
                         .next();
         IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
                 ifcSite.getContainsElements().iterator().next();
-
         IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
                 .getRelatedElements().iterator().next();
 
@@ -200,7 +199,6 @@ public class EywaToIfcConverterTest {
                         .next();
         IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
                 ifcSite.getContainsElements().iterator().next();
-
         IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
                 .getRelatedElements().iterator().next();
 
@@ -328,39 +326,36 @@ public class EywaToIfcConverterTest {
                         ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
                         "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
                         ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
-                        "#19=IFCCARTESIANPOINT((150897.92,115859.01,1300.89))" +
-                        ";\n" + "#20=IFCDIRECTION((-1.0,0.0,0.0));\n" +
-                        "#21=IFCDIRECTION((0.0,0.0,-1.0));\n" +
-                        "#22=IFCAXIS2PLACEMENT3D(#19,#20,#21);\n" +
-                        "#23=IFCLOCALPLACEMENT($,#22);\n" +
-                        "#24=IFCCARTESIANPOINT((0.0,0.0));\n" +
-                        "#25=IFCDIRECTION((1.0,0.0));\n" +
-                        "#26=IFCAXIS2PLACEMENT2D(#24,#25);\n" +
-                        "#27=IFCCIRCLEPROFILEDEF(.AREA.,$,#26,320.68);\n" +
-                        "#28=IFCEXTRUDEDAREASOLID(#27,#10,#8,85.85);\n" +
-                        "#29=IFCCIRCLEPROFILEDEF(.AREA.,$,#26,177.8);\n" +
-                        "#30=IFCCARTESIANPOINT((0.0,0.0,85.85));\n" +
-                        "#31=IFCAXIS2PLACEMENT3D(#30,#8,#9);\n" +
-                        "#32=IFCEXTRUDEDAREASOLID(#29,#31,#8,17" +
-                        ".169999999999998);\n" +
-                        "#33=IFCBOOLEANRESULT(.UNION.,#28,#32);\n" +
-                        "#34=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#33));" +
-                        "\n" + "#35=IFCPRODUCTDEFINITIONSHAPE($,$,(#34));\n" +
-                        "#36=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
-                        ",#6,'Blind'," + "'{\\X\\0A  " +
-                        "\"CATEGORY\" : \"APPFLANGE\",\\X\\0A  \"ADESCR\" : " +
-                        "\"Cieca\",\\X\\0A  \"NDIAMETRO\" : 355.6,\\X\\0A  " +
-                        "\"ITIPO_STD\" : \"0-ANSI\",\\X\\0A  " +
+                        "#19=IFCLOCALPLACEMENT($,#10);\n" +
+                        "#20=IFCCARTESIANPOINT((0.0,38.1));\n" +
+                        "#21=IFCDIRECTION((1.0,0.0));\n" +
+                        "#22=IFCAXIS2PLACEMENT2D(#20,#21);\n" +
+                        "#23=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,16.7,4" +
+                        ".55);\n" + "#24=IFCAXIS1PLACEMENT(#7,#9);\n" +
+                        "#25=IFCREVOLVEDAREASOLID(#23,#10,#24,0.79);\n" +
+                        "#26=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
+                        "(#25));\n" +
+                        "#27=IFCPRODUCTDEFINITIONSHAPE($,$,(#26));\n" +
+                        "#28=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Curve'," + "'{\\X\\0A  " +
+                        "\"CATEGORY\" : \"TUBCURVE\",\\X\\0A  \"ADESCR\" : " +
+                        "\"New\"," +
+                        "\\X\\0A  \"NANGOLO\" : 45.0000010633437,\\X\\0A  " +
+                        "\"NDIAMETRO\" : 33.4,\\X\\0A  \"ASCHEDULE\" : " +
+                        "\"80\",\\X\\0A" +
+                        "  \"ITIPO_STD\" : \"0-ANSI\",\\X\\0A  " +
                         "\"ITIPO_FAMSPEC\" : " +
-                        "\"\",\\X\\0A  \"NDIAM_CORONA\" : 641.35,\\X\\0A  " +
-                        "\"NSPESS\" " +
-                        ": 85.85,\\X\\0A  \"ITIPO_FLANGIA\" : " +
-                        "\"100-CIECA\"\\X\\0A}'," +
-                        "$,#23,#35,.PRODUCT.,$);\n" +
-                        "#37=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        "\"\",\\X\\0A  \"AGRUPPO_SCH\" : \"A08\",\\X\\0A  " +
+                        "\"NRAGGIO\"" +
+                        " : 38.1000000000058,\\X\\0A  \"NSPESS\" : 4.55," +
+                        "\\X\\0A  " +
+                        "\"NLUNGHEZZA\" : 29.9236707325395,\\X\\0A  " +
+                        "\"ITIPO_CURVA\" :" +
+                        " \"2-CURVA_LST\"\\X\\0A}',$,#19,#27,.PRODUCT.,$);\n" +
+                        "#29=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
                         ifcRelContainedInSpatialStructure.getGlobalId()
                                 .serialize() + ",#6,'Site to geometries " +
-                        "link',$," + "(#36),#18);\n" + "#38=IFCRELAGGREGATES(" +
+                        "link',$," + "(#28),#18);\n" + "#30=IFCRELAGGREGATES(" +
                         ifcRelAggregates.getGlobalId().serialize() + ",#6," +
                         "'Project to" + " site link',$,#17,(#18));\n" +
                         "ENDSEC;\n";

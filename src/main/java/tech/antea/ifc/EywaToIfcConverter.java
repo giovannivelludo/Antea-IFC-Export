@@ -357,7 +357,8 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
-     * Resolves the location of {@code obj} and adds it to {@code objPosition}.
+     * Resolves the location of {@code obj} and adds it to {@code
+     * objPositions}.
      *
      * @param obj The object of which to resolve the absolute location.
      * @return The location of the object relative to the world coordinate
@@ -367,7 +368,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * @throws IllegalArgumentException If in {@code obj} the matrix field is
      *                                  not set and the rotation field is.
      */
-    private IfcAxis2Placement3D resolveLocation(@NonNull Primitive obj) {
+    private IfcLocalPlacement resolveLocation(@NonNull Primitive obj) {
         IfcAxis2Placement3D objPosition;
         IfcAxis2Placement3D parentPosition = objPositions.get(obj.getParent());
         if (parentPosition == null) {
@@ -440,7 +441,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                             parentPosition.getRefDirection());
         }
         objPositions.put(obj, objPosition);
-        return objPosition;
+        return new IfcLocalPlacement(null, objPosition);
     }
 
     /**
@@ -458,7 +459,6 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Blind obj) {
-        IfcAxis2Placement3D objPosition = resolveLocation(obj);
         IfcRepresentationItem blind;
         IfcLabel representationType;
         if (obj.getCrownRadius() == null) {
@@ -558,8 +558,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(new IfcLocalPlacement(null,
-                                                               objPosition))
+                        .objectPlacement(resolveLocation(obj))
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(blindProxy);
@@ -589,97 +588,48 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Curve obj) {
-        IfcAxis2Placement3D objPosition = resolveLocation(obj);
-        Double radius1 = obj.getRadius1();
-        Double radius2 = obj.getRadius2();
-        if (obj.getRadius() != null) {
-            radius1 = obj.getRadius();
-            radius2 = obj.getRadius();
+        Double radius = obj.getRadius();
+        if (radius == null) {
+            if (!obj.getRadius1().equals(obj.getRadius2())) {
+                // FIXME: use an IfcManifoldSolidBrep, this means the shape
+                //  of the bent cone will be approximated using polygons.
+                throw new IllegalArgumentException(
+                        "conversion of Curves with radius1 differing from " +
+                                "radius2 is currently not supported");
+                //TODO: instead of throwing the exception, do the conversion
+                // with radius = obj.getRadius1() and inform whoever started
+                // the conversion of the error
+            }
+            radius = obj.getRadius1();
         }
-        double wallThickness = obj.getThickness();
 
-        //creating the spineCurve
-        IfcAxis2Placement3D circumferencePlacement =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(1, 0, 0),
-                                        new IfcDirection(0, 1, 0));
-        IfcCircle circumference = new IfcCircle(circumferencePlacement,
-                                                new IfcPositiveLengthMeasure(obj.getCurveRadius()));
-        Set<IfcTrimmingSelect> trim1 =
-                Collections.singleton(new IfcParameterValue(0));
-        Set<IfcTrimmingSelect> trim2 =
-                Collections.singleton(new IfcParameterValue(obj.getAngle()));
-        IfcTrimmedCurve parentCurve = new IfcTrimmedCurve(circumference,
-                                                          trim1,
-                                                          trim2,
-                                                          new IfcBoolean(true),
-                                                          IfcTrimmingPreference.PARAMETER);
-        IfcCompositeCurveSegment segment = new IfcCompositeCurveSegment(
-                IfcTransitionCode.DISCONTINUOUS,
-                true,
-                parentCurve);
-        List<IfcCompositeCurveSegment> segments =
-                Collections.singletonList(segment);
-        IfcCompositeCurve spineCurve =
-                new IfcCompositeCurve(segments, new IfcLogical(false));
-
-        // creating the two crossSections
-        IfcAxis2Placement2D circlePosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
+        IfcAxis2Placement2D profilePosition =
+                new IfcAxis2Placement2D(new IfcCartesianPoint(0,
+                                                              obj.getCurveRadius()),
                                         new IfcDirection(1, 0));
-        IfcCircleHollowProfileDef circle1 = new IfcCircleHollowProfileDef(
+        IfcCircleHollowProfileDef profile = new IfcCircleHollowProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                circlePosition,
-                new IfcPositiveLengthMeasure(radius1),
-                new IfcPositiveLengthMeasure(wallThickness));
-        IfcCircleHollowProfileDef circle2 = new IfcCircleHollowProfileDef(
-                IfcProfileTypeEnum.AREA,
-                null,
-                circlePosition,
-                new IfcPositiveLengthMeasure(radius2),
-                new IfcPositiveLengthMeasure(wallThickness));
-        List<IfcProfileDef> crossSections = Arrays.asList(circle1, circle2);
-
-        // creating the two crossSectionPositions
-        //TODO: right now cartesian points and direction are given relatively
-        // to circumferencePlacement, check if that's right or if they should be
-        // given relative to the placement of the object
-        IfcAxis2Placement3D position1 =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(obj.getCurveRadius(),
-                                                              0,
-                                                              0),
-                                        new IfcDirection(0, 1, 0),
-                                        new IfcDirection(0, 0, 1));
-        // angolo asse z'' == obj.angle + PI/2
-        IfcAxis2Placement3D position2 =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(
-                        obj.getCurveRadius() * cos(obj.getAngle()),
-                        obj.getCurveRadius() * sin(obj.getAngle()),
-                        0),
-                                        new IfcDirection(cos(
-                                                obj.getAngle() + PI / 2),
-                                                         sin(obj.getAngle() +
-                                                                     PI / 2),
-                                                         0),
-                                        new IfcDirection(0, 0, 1));
-        List<IfcAxis2Placement3D> crossSectionPositions =
-                Arrays.asList(position1, position2);
-
-        //FIXME: IfcSectionedSpine is not included in the Coordination View
-        // MVD, so it's likely that most CAD applications won't be able to
-        // render it, this also makes this method not testable at the moment.
-        // IfcSweptDiskSolid can be used when radius1 == radius2, otherwise
-        // an IfcManifoldSolidBrep is needed, this will cause the shape to be
-        // approximated using polygons.
-        IfcSectionedSpine curve = new IfcSectionedSpine(spineCurve,
-                                                        crossSections,
-                                                        crossSectionPositions);
+                profilePosition,
+                new IfcPositiveLengthMeasure(radius),
+                new IfcPositiveLengthMeasure(obj.getThickness()));
+        IfcAxis2Placement3D curvePlacement =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0, 0, 1),
+                                        new IfcDirection(1, 0, 0));
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid curve = new IfcRevolvedAreaSolid(profile,
+                                                              curvePlacement,
+                                                              rotationAxis,
+                                                              new IfcPlaneAngleMeasure(
+                                                                      obj.getAngle()));
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("SectionedSpine"),
+                new IfcLabel("SweptSolid"),
                 curve);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
@@ -688,8 +638,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(new IfcLocalPlacement(null,
-                                                               objPosition))
+                        .objectPlacement(resolveLocation(obj))
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(curveProxy);
@@ -884,7 +833,6 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Shell obj) {
-        IfcAxis2Placement3D objPosition = resolveLocation(obj);
         //creating a parallelogram that is the right part of the vertical
         // section of the shell
         double height = obj.getLength();
@@ -959,8 +907,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(new IfcLocalPlacement(null,
-                                                               objPosition))
+                        .objectPlacement(resolveLocation(obj))
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         //TODO: instead of IfcProxy, use a suitable IfcProduct for each Eywa
