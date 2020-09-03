@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Endplate",
+        "radius": 1010.00,
+        "neck": 50.00,
+        "length": 560.00,
+        "dish": 510.00,
+        "thickness": 10.00,
+        "lining": 0.00,
+        "switched": true,
+        "imId": 1169185553,
+        "name": "Fondo bombato",
+        "description": {
+          "CATEGORY": "APPFONDI",
+          "ADESCR": "Fondo bombato",
+          "NDIAMETRO": 2020,
+          "ITIPO_FONDO": "2-TF_BOMBATO",
+          "NCOLLETTO": 50,
+          "NBOMBATURA": 510,
+          "NSPESS": 10,
+          "NLUNGHEZZA": 560
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}

@@ -295,7 +295,6 @@ public class EywaToIfcConverterTest {
                         .next();
         IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
                 ifcSite.getContainsElements().iterator().next();
-
         IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
                 .getRelatedElements().iterator().next();
 
@@ -359,6 +358,110 @@ public class EywaToIfcConverterTest {
                         ifcRelAggregates.getGlobalId().serialize() + ",#6," +
                         "'Project to" + " site link',$,#17,(#18));\n" +
                         "ENDSEC;\n";
+
+        String ifcDataSection = getDataSection(filePath);
+        Assert.assertEquals(expectedDataSection, ifcDataSection);
+    }
+
+    /**
+     * Tests the conversion of an EywaRoot containing only one Endplate.
+     */
+    @Test
+    public void convert_Endplate() throws IOException {
+        URL file = r.getResourcesWithLeafName("endplate.eywa").getURLs().get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/endplate.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcRelDecomposes ifcRelAggregates =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
+
+        String expectedDataSection =
+                "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
+                        "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
+                        "#3=IFCORGANIZATION($,'Antea',$,(#2),$);\n" +
+                        "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
+                        "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
+                        "Export','com.anteash:ifc');\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
+                        "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
+                        "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
+                        "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
+                        "#10=IFCAXIS2PLACEMENT3D(#7,#8,#9);\n" +
+                        "#11=IFCGEOMETRICREPRESENTATIONCONTEXT('Plan'," +
+                        "'Model',3,1.0E-8,#10,$);\n" +
+                        "#12=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);\n" +
+                        "#13=IFCSIUNIT(*,.AREAUNIT.,.MILLI.,.SQUARE_METRE.);" +
+                        "\n" +
+                        "#14=IFCSIUNIT(*,.VOLUMEUNIT.,.MILLI.,.CUBIC_METRE.);" +
+                        "\n" +
+                        "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
+                        "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$," + ".COMPLEX.,$,$,$,$,$);\n" +
+                        "#19=IFCCARTESIANPOINT((0.0,0.0,560.0));\n" +
+                        "#20=IFCDIRECTION((0.0,0.0,-1.0));\n" +
+                        "#21=IFCAXIS2PLACEMENT3D(#19,#20,#9);\n" +
+                        "#22=IFCLOCALPLACEMENT($,#21);\n" +
+                        "#23=IFCCARTESIANPOINT((0.0,0.0));\n" +
+                        "#24=IFCDIRECTION((1.0,0.0));\n" +
+                        "#25=IFCAXIS2PLACEMENT2D(#23,#24);\n" +
+                        "#26=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#25,1010.0,10" +
+                        ".0);\n" +
+                        "#27=IFCEXTRUDEDAREASOLID(#26,#10,#8,50.0);\n" +
+                        "#28=IFCELLIPSEPROFILEDEF(.AREA.,$,#25,1010.0,510.0);" +
+                        "\n" + "#29=IFCCARTESIANPOINT((0.0,0.0,50.0));\n" +
+                        "#30=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#31=IFCAXIS2PLACEMENT3D(#29,#30,#9);\n" +
+                        "#32=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#33=IFCAXIS1PLACEMENT(#7,#32);\n" +
+                        "#34=IFCREVOLVEDAREASOLID(#28,#31,#33,3" +
+                        ".141592653589793);\n" +
+                        "#35=IFCELLIPSEPROFILEDEF(.AREA.,$,#25,1000.0,500.0);" +
+                        "\n" + "#36=IFCREVOLVEDAREASOLID(#35,#31,#33,3" +
+                        ".141592653589793);\n" +
+                        "#37=IFCBOOLEANRESULT(.DIFFERENCE.,#34,#36);\n" +
+                        "#38=IFCAXIS2PLACEMENT3D(#29,#8,#9);\n" +
+                        "#39=IFCPLANE(#38);\n" +
+                        "#40=IFCHALFSPACESOLID(#39,.T.);\n" +
+                        "#41=IFCBOOLEANCLIPPINGRESULT(.DIFFERENCE.,#37,#40);" +
+                        "\n" + "#42=IFCBOOLEANRESULT(.UNION.,#27,#41);\n" +
+                        "#43=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#42));" +
+                        "\n" + "#44=IFCPRODUCTDEFINITIONSHAPE($,$,(#43));\n" +
+                        "#45=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Endplate'," +
+                        "'{\\X\\0A  \"CATEGORY\" : \"APPFONDI\",\\X\\0A  " +
+                        "\"ADESCR\" : \"Fondo bombato\",\\X\\0A  " +
+                        "\"NDIAMETRO\" : 2020,\\X\\0A  \"ITIPO_FONDO\" : " +
+                        "\"2-TF_BOMBATO\",\\X\\0A  \"NCOLLETTO\" : 50,\\X\\0A" +
+                        "  \"NBOMBATURA\" : 510,\\X\\0A  \"NSPESS\" : 10," +
+                        "\\X\\0A  \"NLUNGHEZZA\" : 560\\X\\0A}',$,#22,#44," +
+                        ".PRODUCT.,$);\n" +
+                        "#46=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() + ",#6,'Site to geometries " +
+                        "link',$,(#45),#18);\n" + "#47=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() + ",#6," +
+                        "'Project to site link',$,#17,(#18));\n" + "ENDSEC;\n";
 
         String ifcDataSection = getDataSection(filePath);
         Assert.assertEquals(expectedDataSection, ifcDataSection);
