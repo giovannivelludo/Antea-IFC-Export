@@ -985,29 +985,162 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Nozzle obj) {
-        IfcAxis2Placement2D trunkSectionPosition =
+        boolean hasTrunk =
+                obj.getTrunkLength() != null && obj.getTrunkLength() != 0;
+        boolean hasTang =
+                obj.getTangLength() != null && obj.getTangLength() != 0;
+        IfcExtrudedAreaSolid trunk = null;
+        IfcRevolvedAreaSolid tang = null;
+        double raisedFaceLength = obj.getCrownThickness() / 10;
+        double voidRadius = obj.getRadius() - obj.getThickness();
+        double raisedFaceRadius =
+                obj.getRadius() + (obj.getCrownRadius() - obj.getRadius()) / 3;
+
+        if (hasTrunk) {
+            IfcAxis2Placement2D trunkSectionPosition = new IfcAxis2Placement2D(
+                    new IfcCartesianPoint(0, 0),
+                    new IfcDirection(1, 0));
+            IfcCircleHollowProfileDef trunkSection =
+                    new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
+                                                  null,
+                                                  trunkSectionPosition,
+                                                  new IfcPositiveLengthMeasure(
+                                                          obj.getRadius()),
+                                                  new IfcPositiveLengthMeasure(
+                                                          obj.getThickness()));
+            IfcAxis2Placement3D trunkPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            trunk = new IfcExtrudedAreaSolid(trunkSection,
+                                             trunkPosition,
+                                             new IfcDirection(0, 0, 1),
+                                             new IfcLengthMeasure(obj.getTrunkLength()));
+        }
+
+        if (hasTang) {
+            double topBase = raisedFaceRadius - voidRadius;
+
+            // assuming that viewers (erroneously) don't consider the top base
+            // when calculating the trapezium's bounding box
+            IfcAxis2Placement2D sweptAreaPosition =
+                    new IfcAxis2Placement2D(new IfcCartesianPoint(
+                            voidRadius + obj.getThickness() / 2,
+                            obj.getTangLength() / 2), new IfcDirection(1, 0));
+
+            // IfcAxis2Placement2D sweptAreaPosition =
+            //         new IfcAxis2Placement2D(new IfcCartesianPoint(
+            //                 voidRadius + topBase / 2, obj.getTangLength()
+            //                 / 2), new IfcDirection(1, 0));
+
+            IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    sweptAreaPosition,
+                    new IfcPositiveLengthMeasure(obj.getThickness()),
+                    new IfcPositiveLengthMeasure(topBase),
+                    new IfcPositiveLengthMeasure(obj.getTangLength()),
+                    new IfcLengthMeasure(0));
+            IfcAxis2Placement3D tangPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                                  0,
+                                                                  hasTrunk ?
+                                                                          obj.getTrunkLength() :
+                                                                          0),
+                                            // the z axis is rotated by PI/2
+                                            // towards the negative y axis, and
+                                            // the y axis becomes the
+                                            // vertical axis
+                                            new IfcDirection(0, -1, 0),
+                                            new IfcDirection(1, 0, 0));
+            tang = new IfcRevolvedAreaSolid(sweptArea,
+                                            tangPosition,
+                                            new IfcAxis1Placement(new IfcCartesianPoint(
+                                                    0,
+                                                    0,
+                                                    0),
+                                                                  new IfcDirection(
+                                                                          0,
+                                                                          1,
+                                                                          0)),
+                                            new IfcPlaneAngleMeasure(2 * PI));
+        }
+
+        IfcAxis2Placement2D crownSectionPosition =
                 new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
                                         new IfcDirection(1, 0));
-        IfcCircleHollowProfileDef trunkSection = new IfcCircleHollowProfileDef(
+        IfcCircleHollowProfileDef crownSection = new IfcCircleHollowProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                trunkSectionPosition,
-                new IfcPositiveLengthMeasure(obj.getRadius()),
-                // ???
-                new IfcPositiveLengthMeasure(obj.getThickness()));  // ???
-        IfcAxis2Placement3D trunkPosition =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                crownSectionPosition,
+                new IfcPositiveLengthMeasure(obj.getCrownRadius()),
+                new IfcPositiveLengthMeasure(
+                        obj.getCrownRadius() - voidRadius));
+        double crownZOffset = 0;
+        if (hasTrunk) {
+            crownZOffset = obj.getTrunkLength();
+        }
+        if (hasTang) {
+            crownZOffset += obj.getTangLength();
+        }
+        IfcAxis2Placement3D crownPosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              crownZOffset),
                                         new IfcDirection(0, 0, 1),
                                         new IfcDirection(1, 0, 0));
-        IfcExtrudedAreaSolid trunk = new IfcExtrudedAreaSolid(trunkSection,
-                                                              trunkPosition,
+        IfcExtrudedAreaSolid crown = new IfcExtrudedAreaSolid(crownSection,
+                                                              crownPosition,
                                                               new IfcDirection(0,
                                                                                0,
                                                                                1),
                                                               new IfcLengthMeasure(
-                                                                      obj.getTrunkLength()));
+                                                                      obj.getCrownThickness()));
 
-        IfcBooleanResult nozzle = null;
+        IfcAxis2Placement2D raisedFaceSectionPosition = new IfcAxis2Placement2D(
+                new IfcCartesianPoint(0, 0),
+                new IfcDirection(1, 0));
+        IfcCircleHollowProfileDef raisedFaceSection =
+                new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
+                                              null,
+                                              raisedFaceSectionPosition,
+                                              new IfcPositiveLengthMeasure(
+                                                      raisedFaceRadius),
+                                              new IfcPositiveLengthMeasure(
+                                                      raisedFaceRadius -
+                                                              voidRadius));
+        double raisedFaceZOffset = obj.getCrownThickness();
+        if (hasTrunk) {
+            raisedFaceZOffset += obj.getTrunkLength();
+        }
+        if (hasTang) {
+            raisedFaceZOffset += obj.getTangLength();
+        }
+        IfcAxis2Placement3D raisedFacePosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              raisedFaceZOffset),
+                                        new IfcDirection(0, 0, 1),
+                                        new IfcDirection(1, 0, 0));
+        IfcExtrudedAreaSolid raisedFace = new IfcExtrudedAreaSolid(
+                raisedFaceSection,
+                raisedFacePosition,
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(raisedFaceLength));
+
+        IfcBooleanResult nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                                       crown,
+                                                       raisedFace);
+        if (hasTang) {
+            nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                          nozzle,
+                                          tang);
+        }
+        if (hasTrunk) {
+            nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                          nozzle,
+                                          trunk);
+        }
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -1016,12 +1149,25 @@ public class EywaToIfcConverter implements EywaConverter {
                 nozzle);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
+
+        IfcLocalPlacement objectPlacement = resolveLocation(obj);
+        if (obj.isSwitched()) {
+            double length = 0;
+            if (hasTrunk) {
+                length = obj.getTrunkLength();
+            }
+            if (hasTang) {
+                length += obj.getTangLength();
+            }
+            length += obj.getCrownThickness() + raisedFaceLength;
+            objectPlacement = flip(objectPlacement, length);
+        }
         IfcProxy nozzleProxy =
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
+                        .objectPlacement(objectPlacement)
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(nozzleProxy);
@@ -1128,7 +1274,7 @@ public class EywaToIfcConverter implements EywaConverter {
         // of its bounding box is currently on the origin of the xy plane, so
         // it must be shifted to the top right
         double minRadius = min(obj.getRadius2(), obj.getRadius1());
-        IfcAxis2Placement2D sweptAreaPlacement =
+        IfcAxis2Placement2D sweptAreaPosition =
                 new IfcAxis2Placement2D(new IfcCartesianPoint(
                         minRadius - (base / 2) + (abs(topBaseOffset) / 2),
                         height / 2), new IfcDirection(1, 0));
@@ -1136,12 +1282,12 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sweptAreaPlacement,
+                sweptAreaPosition,
                 new IfcPositiveLengthMeasure(base),
                 new IfcPositiveLengthMeasure(base),
                 new IfcPositiveLengthMeasure(height),
                 new IfcLengthMeasure(topBaseOffset));
-        IfcAxis2Placement3D shellPlacement =
+        IfcAxis2Placement3D shellPosition =
                 new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
                                         // the z axis is rotated by PI/2
                                         // towards the negative y axis, and
@@ -1149,7 +1295,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                         new IfcDirection(0, -1, 0),
                                         new IfcDirection(1, 0, 0));
         IfcRevolvedAreaSolid shell = new IfcRevolvedAreaSolid(sweptArea,
-                                                              shellPlacement,
+                                                              shellPosition,
                                                               new IfcAxis1Placement(
                                                                       new IfcCartesianPoint(
                                                                               0,

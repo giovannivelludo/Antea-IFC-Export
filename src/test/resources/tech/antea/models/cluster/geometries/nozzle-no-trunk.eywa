@@ -1,0 +1,56 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Flange",
+        "radius": 10.67,
+        "crownRadius": 10.67,
+        "tangLength": 10.00,
+        "crownThickness": 1.00,
+        "thickness": 1.00,
+        "lining": 0.00,
+        "imId": 1169128926,
+        "name": "Flangia",
+        "description": {
+          "CATEGORY": "APPFLANGE",
+          "ADESCR": "Flangia",
+          "NDIAMETRO": 21.34,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "NDIAM_CORONA": 21.34,
+          "NCODOLO": 10,
+          "NSPESS": 1,
+          "NLUNGHEZZA": 11,
+          "ITIPO_FLANGIA": "0-B165_SW"
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}

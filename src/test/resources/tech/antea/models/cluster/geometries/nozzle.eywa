@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Nozzle",
+        "radius": 117.48,
+        "crownRadius": 190.50,
+        "trunkLength": 187.62,
+        "tangLength": 80.00,
+        "crownThickness": 55.56,
+        "thickness": 41.28,
+        "lining": 0.00,
+        "imId": 1169185541,
+        "name": "N1",
+        "description": {
+          "CATEGORY": "BOCCHELLI",
+          "ADESCR": "N1",
+          "NCOR_ALLOW": 1,
+          "NDIAMETRO": 234.95,
+          "ACLASS": "900",
+          "NTRONCHETTO": 187.62,
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "NDIAM_CORONA": 381,
+          "NSPESS": 41.275,
+          "NLUNGHEZZA": 243.183,
+          "ITIPO_FLANGIA": 3
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}
