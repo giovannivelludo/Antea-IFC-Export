@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Valve",
+        "imId": 1169128375,
+        "name": "Valvola",
+        "radius": 84.14,
+        "length": 649.17,
+        "flanged": true,
+        "crownRadius1": 100,
+        "crownThickness1": 30,
+        "crownRadius2": 100,
+        "crownThickness2": 30,
+        "thickness": 0.00,
+        "lining": 0.00,
+        "description": {
+          "CATEGORY": "TUBVALVOLE",
+          "ADESCR": "VL5292556",
+          "IACCESSO": "0-Sconoscuito",
+          "NDIAMETRO": 168.28,
+          "ITIPO_VALVOLA": "1-VALVE_STD",
+          "ITIPO_COLL": "0-COLL_FLANGIATO",
+          "IOVOLANTINO": "0-Alto",
+          "ASCHEDULE": "120",
+          "ISTATO": "0-APERTA",
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "AGRUPPO_SCH": "03D"
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}

@@ -345,6 +345,26 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * @param values The array to read.
+     * @return The minimum value in the array.
+     *
+     * @throws NullPointerException     If values is null.
+     * @throws IllegalArgumentException If values is empty.
+     */
+    private static double min(@NonNull double... values) {
+        if (values.length == 0) {
+            throw new IllegalArgumentException("values is empty");
+        }
+        double min = values[0];
+        for (double value : values) {
+            if (value < min) {
+                min = value;
+            }
+        }
+        return min;
+    }
+
+    /**
      * @return The result of the conversion.
      */
     @Override
@@ -468,7 +488,6 @@ public class EywaToIfcConverter implements EywaConverter {
             throw new IllegalArgumentException(
                     "conversion of objects with both position and " +
                             "rotation set is currently not supported");
-            // TODO: implement conversion of Primitives using rotation
         } else {
             Double[] position = obj.getPosition();
             if (position == null) {
@@ -494,6 +513,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Beam} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Beam obj) {
@@ -503,11 +525,13 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Blind} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Blind obj) {
-        IfcRepresentationItem blind;
-        IfcLabel representationType;
+        Set<IfcRepresentationItem> blindItems = new HashSet<>(2);
         if (obj.getCrownRadius() == null) {
             // there's no plate
             IfcAxis2Placement2D basePlacement =
@@ -522,11 +546,15 @@ public class EywaToIfcConverter implements EywaConverter {
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
                                             new IfcDirection(0, 0, 1),
                                             new IfcDirection(1, 0, 0));
-            blind = new IfcExtrudedAreaSolid(blindBase,
-                                             blindPlacement,
-                                             new IfcDirection(0, 0, 1),
-                                             new IfcLengthMeasure(obj.getCrownThickness()));
-            representationType = new IfcLabel("SweptSolid");
+            IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindBase,
+                                                                  blindPlacement,
+                                                                  new IfcDirection(
+                                                                          0,
+                                                                          0,
+                                                                          1),
+                                                                  new IfcLengthMeasure(
+                                                                          obj.getCrownThickness()));
+            blindItems.add(blind);
         } else {
             // TODO: find how to calculate plateThickness
             double plateThickness = obj.getCrownThickness() / 5;
@@ -587,17 +615,14 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                                 1),
                                                                         new IfcLengthMeasure(
                                                                                 topThickness));
-
-            blind = new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                         bottomCylinder,
-                                         topCylinder);
-            representationType = new IfcLabel("CSG");
+            blindItems.add(bottomCylinder);
+            blindItems.add(topCylinder);
         }
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                representationType,
-                blind);
+                new IfcLabel("SweptSolid"),
+                blindItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcProxy blindProxy =
@@ -614,6 +639,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Box} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Box obj) {
@@ -623,6 +651,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Collar} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Collar obj) {
@@ -632,6 +663,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Curve} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Curve obj) {
@@ -639,8 +673,6 @@ public class EywaToIfcConverter implements EywaConverter {
         Double radius = obj.getRadius();
         if (radius == null) {
             if (!obj.getRadius1().equals(obj.getRadius2())) {
-                // FIXME: use an IfcManifoldSolidBrep, this means the shape
-                //  of the bent cone will be approximated using polygons.
                 new IllegalArgumentException(
                         "conversion of Curves with radius1 differing from " +
                                 "radius2 is currently not supported")
@@ -693,6 +725,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Dielectric} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Dielectric obj) {
@@ -702,6 +737,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Dish} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Dish obj) {
@@ -711,6 +749,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link DualExpansionJoint} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull DualExpansionJoint obj) {
@@ -720,6 +761,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link EccentricCone} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull EccentricCone obj) {
@@ -734,6 +778,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Empty} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Empty obj) {
@@ -743,6 +790,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Endplate} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Endplate obj) {
@@ -928,6 +978,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link ExpansionJoint} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull ExpansionJoint obj) {
@@ -937,6 +990,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link FaceSet} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull FaceSet obj) {
@@ -946,6 +1002,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link FourWaysValve} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull FourWaysValve obj) {
@@ -955,6 +1014,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Instrument} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Instrument obj) {
@@ -964,6 +1026,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Ladder} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Ladder obj) {
@@ -973,6 +1038,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Mesh} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Mesh obj) {
@@ -982,15 +1050,17 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Nozzle} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Nozzle obj) {
+        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(4);
         boolean hasTrunk =
                 obj.getTrunkLength() != null && obj.getTrunkLength() != 0;
         boolean hasTang =
                 obj.getTangLength() != null && obj.getTangLength() != 0;
-        IfcExtrudedAreaSolid trunk = null;
-        IfcRevolvedAreaSolid tang = null;
         double raisedFaceLength = obj.getCrownThickness() / 10;
         double voidRadius = obj.getRadius() - obj.getThickness();
         double raisedFaceRadius =
@@ -1012,10 +1082,15 @@ public class EywaToIfcConverter implements EywaConverter {
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
                                             new IfcDirection(0, 0, 1),
                                             new IfcDirection(1, 0, 0));
-            trunk = new IfcExtrudedAreaSolid(trunkSection,
-                                             trunkPosition,
-                                             new IfcDirection(0, 0, 1),
-                                             new IfcLengthMeasure(obj.getTrunkLength()));
+            IfcExtrudedAreaSolid trunk = new IfcExtrudedAreaSolid(trunkSection,
+                                                                  trunkPosition,
+                                                                  new IfcDirection(
+                                                                          0,
+                                                                          0,
+                                                                          1),
+                                                                  new IfcLengthMeasure(
+                                                                          obj.getTrunkLength()));
+            nozzleItems.add(trunk);
         }
 
         if (hasTang) {
@@ -1053,17 +1128,21 @@ public class EywaToIfcConverter implements EywaConverter {
                                             // vertical axis
                                             new IfcDirection(0, -1, 0),
                                             new IfcDirection(1, 0, 0));
-            tang = new IfcRevolvedAreaSolid(sweptArea,
-                                            tangPosition,
-                                            new IfcAxis1Placement(new IfcCartesianPoint(
-                                                    0,
-                                                    0,
-                                                    0),
-                                                                  new IfcDirection(
-                                                                          0,
-                                                                          1,
-                                                                          0)),
-                                            new IfcPlaneAngleMeasure(2 * PI));
+            IfcRevolvedAreaSolid tang = new IfcRevolvedAreaSolid(sweptArea,
+                                                                 tangPosition,
+                                                                 new IfcAxis1Placement(
+                                                                         new IfcCartesianPoint(
+                                                                                 0,
+                                                                                 0,
+                                                                                 0),
+                                                                         new IfcDirection(
+                                                                                 0,
+                                                                                 1,
+                                                                                 0)),
+                                                                 new IfcPlaneAngleMeasure(
+                                                                         2 *
+                                                                                 PI));
+            nozzleItems.add(tang);
         }
 
         IfcAxis2Placement2D crownSectionPosition =
@@ -1096,6 +1175,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                                1),
                                                               new IfcLengthMeasure(
                                                                       obj.getCrownThickness()));
+        nozzleItems.add(crown);
 
         IfcAxis2Placement2D raisedFaceSectionPosition = new IfcAxis2Placement2D(
                 new IfcCartesianPoint(0, 0),
@@ -1127,26 +1207,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 raisedFacePosition,
                 new IfcDirection(0, 0, 1),
                 new IfcLengthMeasure(raisedFaceLength));
-
-        IfcBooleanResult nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                                       crown,
-                                                       raisedFace);
-        if (hasTang) {
-            nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                          nozzle,
-                                          tang);
-        }
-        if (hasTrunk) {
-            nozzle = new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                          nozzle,
-                                          trunk);
-        }
+        nozzleItems.add(raisedFace);
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
-                nozzle);
+                new IfcLabel("SweptSolid"),
+                nozzleItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
 
@@ -1176,6 +1243,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link OrthoValve} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull OrthoValve obj) {
@@ -1185,6 +1255,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link RectangularBlind} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull RectangularBlind obj) {
@@ -1194,6 +1267,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link RectangularEndplate} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull RectangularEndplate obj) {
@@ -1203,6 +1279,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link RectangularFlange} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull RectangularFlange obj) {
@@ -1212,6 +1291,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link RectangularPlate} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull RectangularPlate obj) {
@@ -1221,6 +1303,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link RectangularShell} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull RectangularShell obj) {
@@ -1230,6 +1315,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Ring} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Ring obj) {
@@ -1251,8 +1339,6 @@ public class EywaToIfcConverter implements EywaConverter {
         double radiusDifference = obj.getRadius1() - obj.getRadius2();
         double side =
                 sqrt((height * height) + (radiusDifference * radiusDifference));
-        //TODO: convert lining as a separate solid with a different color
-        // (green) for all Primitives
         double base = obj.getThickness();
         // alfa is the bottom right angle of the parallelogram
         double sinAlfa = height / side;
@@ -1322,14 +1408,15 @@ public class EywaToIfcConverter implements EywaConverter {
                         .objectPlacement(resolveLocation(obj))
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        //FIXME: instead of IfcProxy, use a suitable IfcProduct for each Eywa
-        // primitive (when possible)
         geometries.add(shellProxy);
     }
 
     /**
      * @param obj The {@link Sphere} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Sphere obj) {
@@ -1339,6 +1426,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Stair} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Stair obj) {
@@ -1348,6 +1438,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Sweep} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Sweep obj) {
@@ -1357,6 +1450,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link TankShell} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull TankShell obj) {
@@ -1366,6 +1462,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Tee} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Tee obj) {
@@ -1375,6 +1474,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link ThreeWaysValve} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull ThreeWaysValve obj) {
@@ -1384,9 +1486,217 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * @param obj The {@link Valve} to convert.
      * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
      */
     @Override
     public void addObject(@NonNull Valve obj) {
+        double thickness =
+                obj.getThickness() == 0d || obj.getThickness() == -0d ? 0.1 :
+                        obj.getThickness();
+        Set<IfcRepresentationItem> valveItems = new HashSet<>(4);
+        // creating the first ouput
+        IfcPolyline outerTriangle1 =
+                new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                new IfcCartesianPoint(obj.getRadius1(), 0),
+                                new IfcCartesianPoint(0, obj.getLength1()));
+        IfcArbitraryClosedProfileDef outerCone1Section =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 outerTriangle1);
+        IfcAxis2Placement3D outerCone1Position =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+        IfcRevolvedAreaSolid outerCone1 = new IfcRevolvedAreaSolid(
+                outerCone1Section,
+                outerCone1Position,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
 
+        double innerRadius1 = obj.getRadius1() - thickness;
+        IfcPolyline innerTriangle1 =
+                new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                new IfcCartesianPoint(innerRadius1, 0),
+                                new IfcCartesianPoint(0,
+                                                      (obj.getLength1() /
+                                                              obj.getRadius1()) *
+                                                              innerRadius1));
+        IfcArbitraryClosedProfileDef innerCone1Section =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 innerTriangle1);
+        IfcAxis2Placement3D innerCone1Position =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid innerCone1 = new IfcRevolvedAreaSolid(
+                innerCone1Section,
+                innerCone1Position,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
+
+        IfcBooleanResult output1 =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     outerCone1,
+                                     innerCone1);
+        valveItems.add(output1);
+
+        // creating the second output
+        IfcPolyline outerTriangle2 =
+                new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                new IfcCartesianPoint(obj.getRadius2(), 0),
+                                new IfcCartesianPoint(0, obj.getLength2()));
+        IfcArbitraryClosedProfileDef outerCone2Section =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 outerTriangle2);
+        IfcAxis2Placement3D outerCone2Position =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              obj.getLength1() +
+                                                                      obj.getLength2()),
+                                        new IfcDirection(0, 1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid outerCone2 = new IfcRevolvedAreaSolid(
+                outerCone2Section,
+                outerCone2Position,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
+
+        double innerRadius2 = obj.getRadius2() - thickness;
+        IfcPolyline innerTriangle2 =
+                new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                new IfcCartesianPoint(innerRadius2, 0),
+                                new IfcCartesianPoint(0,
+                                                      (obj.getLength2() /
+                                                              obj.getRadius2()) *
+                                                              innerRadius2));
+        IfcArbitraryClosedProfileDef innerCone2Section =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 innerTriangle2);
+        IfcAxis2Placement3D innerCone2Position =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              obj.getLength1() +
+                                                                      obj.getLength2()),
+                                        new IfcDirection(0, 1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid innerCone2 = new IfcRevolvedAreaSolid(
+                innerCone2Section,
+                innerCone2Position,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
+
+        IfcBooleanResult output2 =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     outerCone2,
+                                     innerCone2);
+        valveItems.add(output2);
+
+        // creating the sphere
+        IfcAxis2Placement2D circlePosition =
+                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
+                                        new IfcDirection(1, 0));
+        IfcPositiveLengthMeasure circleRadius =
+                new IfcPositiveLengthMeasure(min(obj.getLength1(),
+                                                 obj.getLength2(),
+                                                 obj.getRadius1(),
+                                                 obj.getRadius2()));
+        IfcCircleProfileDef circle =
+                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
+                                        null,
+                                        circlePosition,
+                                        circleRadius);
+        IfcAxis2Placement3D spherePosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              obj.getLength1()),
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
+                                                               spherePosition,
+                                                               rotationAxis,
+                                                               new IfcPlaneAngleMeasure(
+                                                                       PI));
+        IfcBooleanResult cutSphere =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     sphere,
+                                     new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                                          outerCone1,
+                                                          outerCone2));
+        valveItems.add(cutSphere);
+
+        if (obj.getFlanged() != null && obj.getFlanged().equals(true)) {
+            IfcAxis2Placement2D crownSectionPosition = new IfcAxis2Placement2D(
+                    new IfcCartesianPoint(0, 0),
+                    new IfcDirection(1, 0));
+            IfcCircleProfileDef crownSection1 = new IfcCircleProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    crownSectionPosition,
+                    new IfcPositiveLengthMeasure(obj.getCrownRadius1()));
+            IfcAxis2Placement3D crownPosition1 =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            IfcExtrudedAreaSolid crown1 =
+                    new IfcExtrudedAreaSolid(crownSection1,
+                                             crownPosition1,
+                                             new IfcDirection(0, 0, 1),
+                                             new IfcLengthMeasure(obj.getCrownThickness1()));
+            IfcBooleanResult flange1 =
+                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                         crown1,
+                                         outerCone1);
+
+            IfcCircleProfileDef crownSection2 = new IfcCircleProfileDef(
+                    IfcProfileTypeEnum.AREA,
+                    null,
+                    crownSectionPosition,
+                    new IfcPositiveLengthMeasure(obj.getCrownRadius2()));
+            IfcAxis2Placement3D crownPosition2 =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                                  0,
+                                                                  obj.getLength1() +
+                                                                          obj.getLength2() -
+                                                                          obj.getCrownThickness2()),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
+            IfcExtrudedAreaSolid crown2 =
+                    new IfcExtrudedAreaSolid(crownSection2,
+                                             crownPosition2,
+                                             new IfcDirection(0, 0, 1),
+                                             new IfcLengthMeasure(obj.getCrownThickness2()));
+            IfcBooleanResult flange2 =
+                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                         crown2,
+                                         outerCone2);
+
+            valveItems.add(flange1);
+            valveItems.add(flange2);
+        }
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                valveItems);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy valveProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(valveProxy);
     }
 }
