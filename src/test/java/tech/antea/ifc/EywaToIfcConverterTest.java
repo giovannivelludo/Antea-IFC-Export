@@ -131,14 +131,13 @@ public class EywaToIfcConverterTest {
                         "'05-ML-120-0-013-1/2\"-02A-V',$,$,$,$,(#11),#16);\n" +
                         "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
                         ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
-                        "#19=IFCCARTESIANPOINT((150841.07,127501.77,1118.74))" +
-                        ";\n" + "#20=IFCAXIS2PLACEMENT3D(#19,#8,#9);\n" +
-                        "#21=IFCLOCALPLACEMENT($,#20);\n" +
-                        "#22=IFCCARTESIANPOINT((8.28,114.71));\n" +
-                        "#23=IFCDIRECTION((1.0,0.0));\n" +
-                        "#24=IFCAXIS2PLACEMENT2D(#22,#23);\n" +
-                        "#25=IFCTRAPEZIUMPROFILEDEF(.AREA.,$,#24,4.78,4.78," +
-                        "229.42,0" + ".0);\n" +
+                        "#19=IFCLOCALPLACEMENT($,#10);\n" +
+                        "#20=IFCCARTESIANPOINT((5.89,0.0));\n" +
+                        "#21=IFCCARTESIANPOINT((10.67,0.0));\n" +
+                        "#22=IFCCARTESIANPOINT((10.67,229.42));\n" +
+                        "#23=IFCCARTESIANPOINT((5.89,229.42));\n" +
+                        "#24=IFCPOLYLINE((#20,#21,#22,#23));\n" +
+                        "#25=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#24);\n" +
                         "#26=IFCDIRECTION((0.0,-1.0,0.0));\n" +
                         "#27=IFCAXIS2PLACEMENT3D(#7,#26,#9);\n" +
                         "#28=IFCDIRECTION((0.0,1.0,0.0));\n" +
@@ -160,7 +159,7 @@ public class EywaToIfcConverterTest {
                         "\\X\\0A  " +
                         "\"AGRUPPO_SCH\" : \"A02\",\\X\\0A  \"NSPESS\" : 4" +
                         ".78,\\X\\0A" +
-                        "  \"NLUNGHEZZA\" : 229.420999999988\\X\\0A}',$,#21," +
+                        "  \"NLUNGHEZZA\" : 229.420999999988\\X\\0A}',$,#19," +
                         "#32," + ".PRODUCT.,$);\n" +
                         "#34=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
                         ifcRelContainedInSpatialStructure.getGlobalId()
@@ -480,8 +479,6 @@ public class EywaToIfcConverterTest {
         String filePath = "./ifc-out/nozzle-no-trunk.ifc";
         EywaToIfcConverter.writeToFile(result, filePath);
 
-        IfcTimeStamp modifiedDate =
-                result.getOwnerHistory().getLastModifiedDate();
         IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
         IfcRelDecomposes ifcRelAggregates =
                 result.getIsDecomposedBy().iterator().next();
@@ -501,7 +498,7 @@ public class EywaToIfcConverterTest {
                         "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
                         "Export'," + "'com.anteash:ifc');\n" +
                         "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
-                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ",#4,#5," +
                         creationDate.serialize() + ");\n" +
                         "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
                         "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
@@ -521,29 +518,32 @@ public class EywaToIfcConverterTest {
                         "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
                         ",#6,$,$,$,$,$,$," + ".COMPLEX" + ".,$,$,$,$,$);\n" +
                         "#19=IFCLOCALPLACEMENT($,#10);\n" +
-                        "#20=IFCCARTESIANPOINT((10.17,5.0));\n" +
+                        "#20=IFCCARTESIANPOINT((0.0,0.0));\n" +
                         "#21=IFCDIRECTION((1.0,0.0));\n" +
                         "#22=IFCAXIS2PLACEMENT2D(#20,#21);\n" +
-                        "#23=IFCTRAPEZIUMPROFILEDEF(.AREA.,$,#22,1.0,1.0,10" +
-                        ".0,0.0);\n" + "#24=IFCDIRECTION((0.0,-1.0,0.0));\n" +
-                        "#25=IFCAXIS2PLACEMENT3D(#7,#24,#9);\n" +
-                        "#26=IFCDIRECTION((0.0,1.0,0.0));\n" +
-                        "#27=IFCAXIS1PLACEMENT(#7,#26);\n" +
-                        "#28=IFCREVOLVEDAREASOLID(#23,#25,#27,6" +
+                        "#23=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,10.67,1" +
+                        ".0);\n" + "#24=IFCCARTESIANPOINT((0.0,0.0,10.0));\n" +
+                        "#25=IFCAXIS2PLACEMENT3D(#24,#8,#9);\n" +
+                        "#26=IFCEXTRUDEDAREASOLID(#23,#25,#8,1.0);\n" +
+                        "#27=IFCCARTESIANPOINT((9.67,0.0));\n" +
+                        "#28=IFCCARTESIANPOINT((10.67,0.0));\n" +
+                        "#29=IFCCARTESIANPOINT((10.67,10.0));\n" +
+                        "#30=IFCCARTESIANPOINT((9.67,10.0));\n" +
+                        "#31=IFCPOLYLINE((#27,#28,#29,#30));\n" +
+                        "#32=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#31);\n" +
+                        "#33=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#34=IFCAXIS2PLACEMENT3D(#7,#33,#9);\n" +
+                        "#35=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#36=IFCAXIS1PLACEMENT(#7,#35);\n" +
+                        "#37=IFCREVOLVEDAREASOLID(#32,#34,#36,6" +
                         ".283185307179586);\n" +
-                        "#29=IFCCARTESIANPOINT((0.0,0.0));\n" +
-                        "#30=IFCAXIS2PLACEMENT2D(#29,#21);\n" +
-                        "#31=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#30,10.67,1" +
-                        ".0);\n" + "#32=IFCCARTESIANPOINT((0.0,0.0,11.0));\n" +
-                        "#33=IFCAXIS2PLACEMENT3D(#32,#8,#9);\n" +
-                        "#34=IFCEXTRUDEDAREASOLID(#31,#33,#8,0.1);\n" +
-                        "#35=IFCCARTESIANPOINT((0.0,0.0,10.0));\n" +
-                        "#36=IFCAXIS2PLACEMENT3D(#35,#8,#9);\n" +
-                        "#37=IFCEXTRUDEDAREASOLID(#31,#36,#8,1.0);\n" +
-                        "#38=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
-                        "(#28,#34," + "#37));\n" +
-                        "#39=IFCPRODUCTDEFINITIONSHAPE($,$,(#38));\n" +
-                        "#40=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        "#38=IFCCARTESIANPOINT((0.0,0.0,11.0));\n" +
+                        "#39=IFCAXIS2PLACEMENT3D(#38,#8,#9);\n" +
+                        "#40=IFCEXTRUDEDAREASOLID(#23,#39,#8,0.1);\n" +
+                        "#41=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
+                        "(#26,#37," + "#40));\n" +
+                        "#42=IFCPRODUCTDEFINITIONSHAPE($,$,(#41));\n" +
+                        "#43=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
                         ",#6,'Nozzle'," + "'{\\X\\0A " +
                         " \"CATEGORY\" : \"APPFLANGE\",\\X\\0A  \"ADESCR\" : " +
                         "\"Flangia\",\\X\\0A  \"NDIAMETRO\" : 21.34,\\X\\0A  " +
@@ -554,11 +554,11 @@ public class EywaToIfcConverterTest {
                         ": 10,\\X\\0A  \"NSPESS\" : 1,\\X\\0A  \"NLUNGHEZZA\"" +
                         " : 11," +
                         "\\X\\0A  \"ITIPO_FLANGIA\" : \"0-B165_SW\"\\X\\0A}'," +
-                        "$,#19," + "#39,.PRODUCT.,$);\n" +
-                        "#41=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        "$,#19," + "#42,.PRODUCT.,$);\n" +
+                        "#44=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
                         ifcRelContainedInSpatialStructure.getGlobalId()
                                 .serialize() + ",#6,'Site to geometries " +
-                        "link',$," + "(#40),#18);\n" + "#42=IFCRELAGGREGATES(" +
+                        "link',$," + "(#43),#18);\n" + "#45=IFCRELAGGREGATES(" +
                         ifcRelAggregates.getGlobalId().serialize() + ",#6," +
                         "'Project to" + " site link',$,#17,(#18));\n" +
                         "ENDSEC;\n";
@@ -631,16 +631,16 @@ public class EywaToIfcConverterTest {
                         "#23=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,117.48,41" +
                         ".28);\n" +
                         "#24=IFCEXTRUDEDAREASOLID(#23,#10,#8,187.62);\n" +
-                        "#25=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,141.82,65" +
-                        ".61999999999999);\n" +
-                        "#26=IFCCARTESIANPOINT((0.0,0.0,243.18));\n" +
-                        "#27=IFCAXIS2PLACEMENT3D(#26,#8,#9);\n" +
-                        "#28=IFCEXTRUDEDAREASOLID(#25,#27,#8,5.556);\n" +
-                        "#29=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,190.5,114" +
+                        "#25=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,190.5,114" +
                         ".3);\n" +
-                        "#30=IFCCARTESIANPOINT((0.0,0.0,187.62));\n" +
+                        "#26=IFCCARTESIANPOINT((0.0,0.0,187.62));\n" +
+                        "#27=IFCAXIS2PLACEMENT3D(#26,#8,#9);\n" +
+                        "#28=IFCEXTRUDEDAREASOLID(#25,#27,#8,55.56);\n" +
+                        "#29=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,141.82,65" +
+                        ".61999999999999);\n" +
+                        "#30=IFCCARTESIANPOINT((0.0,0.0,243.18));\n" +
                         "#31=IFCAXIS2PLACEMENT3D(#30,#8,#9);\n" +
-                        "#32=IFCEXTRUDEDAREASOLID(#29,#31,#8,55.56);\n" +
+                        "#32=IFCEXTRUDEDAREASOLID(#29,#31,#8,5.556);\n" +
                         "#33=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
                         "(#24,#28," + "#32));\n" +
                         "#34=IFCPRODUCTDEFINITIONSHAPE($,$,(#33));\n" +
@@ -729,55 +729,52 @@ public class EywaToIfcConverterTest {
                         "#20=IFCCARTESIANPOINT((0.0,0.0));\n" +
                         "#21=IFCDIRECTION((1.0,0.0));\n" +
                         "#22=IFCAXIS2PLACEMENT2D(#20,#21);\n" +
-                        "#23=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,141.82,65" +
-                        ".61999999999999);\n" +
-                        "#24=IFCCARTESIANPOINT((0.0,0.0,323.18));\n" +
-                        "#25=IFCAXIS2PLACEMENT3D(#24,#8,#9);\n" +
-                        "#26=IFCEXTRUDEDAREASOLID(#23,#25,#8,5.556);\n" +
-                        "#27=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,117.48,41" +
+                        "#23=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,117.48,41" +
                         ".28);\n" +
-                        "#28=IFCEXTRUDEDAREASOLID(#27,#10,#8,187.62);\n" +
-                        "#29=IFCCARTESIANPOINT((96.84,40.0));\n" +
-                        "#30=IFCAXIS2PLACEMENT2D(#29,#21);\n" +
-                        "#31=IFCTRAPEZIUMPROFILEDEF(.AREA.,$,#30,41.28,65" +
-                        ".61999999999999,80.0,0.0);\n" +
-                        "#32=IFCCARTESIANPOINT((0.0,0.0,187.62));\n" +
-                        "#33=IFCDIRECTION((0.0,-1.0,0.0));\n" +
-                        "#34=IFCAXIS2PLACEMENT3D(#32,#33,#9);\n" +
-                        "#35=IFCDIRECTION((0.0,1.0,0.0));\n" +
-                        "#36=IFCAXIS1PLACEMENT(#7,#35);\n" +
-                        "#37=IFCREVOLVEDAREASOLID(#31,#34,#36,6" +
+                        "#24=IFCEXTRUDEDAREASOLID(#23,#10,#8,187.62);\n" +
+                        "#25=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,141.82,65" +
+                        ".61999999999999);\n" +
+                        "#26=IFCCARTESIANPOINT((0.0,0.0,323.18));\n" +
+                        "#27=IFCAXIS2PLACEMENT3D(#26,#8,#9);\n" +
+                        "#28=IFCEXTRUDEDAREASOLID(#25,#27,#8,5.556);\n" +
+                        "#29=IFCCARTESIANPOINT((76.2,0.0));\n" +
+                        "#30=IFCCARTESIANPOINT((117.48,0.0));\n" +
+                        "#31=IFCCARTESIANPOINT((141.82,80.0));\n" +
+                        "#32=IFCCARTESIANPOINT((76.2,80.0));\n" +
+                        "#33=IFCPOLYLINE((#29,#30,#31,#32));\n" +
+                        "#34=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#33);\n" +
+                        "#35=IFCCARTESIANPOINT((0.0,0.0,187.62));\n" +
+                        "#36=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#37=IFCAXIS2PLACEMENT3D(#35,#36,#9);\n" +
+                        "#38=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#39=IFCAXIS1PLACEMENT(#7,#38);\n" +
+                        "#40=IFCREVOLVEDAREASOLID(#34,#37,#39,6" +
                         ".283185307179586);\n" +
-                        "#38=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,190.5,114" +
+                        "#41=IFCCIRCLEHOLLOWPROFILEDEF(.AREA.,$,#22,190.5,114" +
                         ".3);\n" +
-                        "#39=IFCCARTESIANPOINT((0.0,0.0,267.62));\n" +
-                        "#40=IFCAXIS2PLACEMENT3D(#39,#8,#9);\n" +
-                        "#41=IFCEXTRUDEDAREASOLID(#38,#40,#8,55.56);\n" +
-                        "#42=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
-                        "(#26,#28," + "#37,#41));\n" +
-                        "#43=IFCPRODUCTDEFINITIONSHAPE($,$,(#42));\n" +
-                        "#44=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
-                        ",#6,'Nozzle','{\\X\\0A " +
-                        " \"CATEGORY\" : \"BOCCHELLI\",\\X\\0A  \"ADESCR\" : " +
-                        "\"N1\"," +
-                        "\\X\\0A  \"NCOR_ALLOW\" : 1,\\X\\0A  \"NDIAMETRO\" :" +
-                        " 234.95," + "\\X\\0A  \"ACLASS\" : \"900\",\\X\\0A  " +
-                        "\"NTRONCHETTO\" : 187" +
-                        ".62,\\X\\0A  \"ITIPO_STD\" : \"0-ANSI\",\\X\\0A  " +
+                        "#42=IFCCARTESIANPOINT((0.0,0.0,267.62));\n" +
+                        "#43=IFCAXIS2PLACEMENT3D(#42,#8,#9);\n" +
+                        "#44=IFCEXTRUDEDAREASOLID(#41,#43,#8,55.56);\n" +
+                        "#45=IFCSHAPEREPRESENTATION(#11,'Body','SweptSolid'," +
+                        "(#24,#28,#40,#44));\n" +
+                        "#46=IFCPRODUCTDEFINITIONSHAPE($,$,(#45));\n" +
+                        "#47=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Nozzle'," +
+                        "'{\\X\\0A  \"CATEGORY\" : \"BOCCHELLI\",\\X\\0A  " +
+                        "\"ADESCR\" : \"N1\",\\X\\0A  \"NCOR_ALLOW\" : 1," +
+                        "\\X\\0A  \"NDIAMETRO\" : 234.95,\\X\\0A  \"ACLASS\" " +
+                        ": \"900\",\\X\\0A  \"NTRONCHETTO\" : 187.62,\\X\\0A " +
+                        " \"ITIPO_STD\" : \"0-ANSI\",\\X\\0A  " +
                         "\"ITIPO_FAMSPEC\" : \"\",\\X\\0A  \"NDIAM_CORONA\" :" +
-                        " 381," +
-                        "\\X\\0A  \"NSPESS\" : 41.275,\\X\\0A  \"NLUNGHEZZA\"" +
-                        " : 243" +
-                        ".183,\\X\\0A  \"ITIPO_FLANGIA\" : 3\\X\\0A}',$,#19," +
-                        "#43," + ".PRODUCT.,$);\n" +
-                        "#45=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        " 381,\\X\\0A  \"NSPESS\" : 41.275,\\X\\0A  " +
+                        "\"NLUNGHEZZA\" : 243.183,\\X\\0A  \"ITIPO_FLANGIA\" " +
+                        ": 3\\X\\0A}',$,#19,#46,.PRODUCT.,$);\n" +
+                        "#48=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
                         ifcRelContainedInSpatialStructure.getGlobalId()
-                                .serialize() +
-                        ",#6,'Site to geometries link',$," + "(#44),#18);\n" +
-                        "#46=IFCRELAGGREGATES(" +
-                        ifcRelAggregates.getGlobalId().serialize() +
-                        ",#6,'Project to" + " site link',$,#17,(#18));\n" +
-                        "ENDSEC;\n";
+                                .serialize() + ",#6,'Site to geometries " +
+                        "link',$,(#47),#18);\n" + "#49=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() + ",#6," +
+                        "'Project to site link',$,#17,(#18));\n" + "ENDSEC;\n";
 
         String ifcDataSection = getDataSection(filePath);
         Assert.assertEquals(expectedDataSection, ifcDataSection);

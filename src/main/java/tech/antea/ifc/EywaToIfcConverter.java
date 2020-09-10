@@ -43,7 +43,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static java.lang.Math.*;
+import static java.lang.Math.PI;
 
 public class EywaToIfcConverter implements EywaConverter {
 
@@ -1094,28 +1094,18 @@ public class EywaToIfcConverter implements EywaConverter {
         }
 
         if (hasTang) {
-            double topBase = raisedFaceRadius - voidRadius;
-
-            // assuming that viewers (erroneously) don't consider the top base
-            // when calculating the trapezium's bounding box
-            IfcAxis2Placement2D sweptAreaPosition =
-                    new IfcAxis2Placement2D(new IfcCartesianPoint(
-                            voidRadius + obj.getThickness() / 2,
-                            obj.getTangLength() / 2), new IfcDirection(1, 0));
-
-            // IfcAxis2Placement2D sweptAreaPosition =
-            //         new IfcAxis2Placement2D(new IfcCartesianPoint(
-            //                 voidRadius + topBase / 2, obj.getTangLength()
-            //                 / 2), new IfcDirection(1, 0));
-
-            IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    sweptAreaPosition,
-                    new IfcPositiveLengthMeasure(obj.getThickness()),
-                    new IfcPositiveLengthMeasure(topBase),
-                    new IfcPositiveLengthMeasure(obj.getTangLength()),
-                    new IfcLengthMeasure(0));
+            IfcPolyline trapezium =
+                    new IfcPolyline(new IfcCartesianPoint(voidRadius, 0),
+                                    new IfcCartesianPoint(
+                                            voidRadius + obj.getThickness(), 0),
+                                    new IfcCartesianPoint(raisedFaceRadius,
+                                                          obj.getTangLength()),
+                                    new IfcCartesianPoint(voidRadius,
+                                                          obj.getTangLength()));
+            IfcArbitraryClosedProfileDef sweptArea =
+                    new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                     null,
+                                                     trapezium);
             IfcAxis2Placement3D tangPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0,
                                                                   0,
@@ -1335,44 +1325,20 @@ public class EywaToIfcConverter implements EywaConverter {
     public void addObject(@NonNull Shell obj) {
         //creating a parallelogram that is the right part of the vertical
         // section of the shell
-        double height = obj.getLength();
-        double radiusDifference = obj.getRadius1() - obj.getRadius2();
-        double side =
-                sqrt((height * height) + (radiusDifference * radiusDifference));
-        double base = obj.getThickness();
-        // alfa is the bottom right angle of the parallelogram
-        double sinAlfa = height / side;
-        double topBaseOffset;
-        if (obj.getRadius2() < obj.getRadius1()) {
-            // if the top base is shifted left compared to the bottom base,
-            // the offset must be negative
-            topBaseOffset = -sqrt(1 - (sinAlfa * sinAlfa)) *
-                    side; // == -cos(asin(sinAlfa)) * side
-        } else if (obj.getRadius2().equals(obj.getRadius1())) {
-            topBaseOffset = 0;
-        } else {
-            // the top base is shifted right compared to the bottom base, the
-            // offset must be positive
-            topBaseOffset =
-                    sinAlfa * side; // == -cos((PI / 2) + asin(sinAlfa)) * side
-        }
-        // the parallelogram will be rotated around the y axis and the center
-        // of its bounding box is currently on the origin of the xy plane, so
-        // it must be shifted to the top right
-        double minRadius = min(obj.getRadius2(), obj.getRadius1());
-        IfcAxis2Placement2D sweptAreaPosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(
-                        minRadius - (base / 2) + (abs(topBaseOffset) / 2),
-                        height / 2), new IfcDirection(1, 0));
-
-        IfcTrapeziumProfileDef sweptArea = new IfcTrapeziumProfileDef(
-                IfcProfileTypeEnum.AREA,
-                null,
-                sweptAreaPosition,
-                new IfcPositiveLengthMeasure(base),
-                new IfcPositiveLengthMeasure(base),
-                new IfcPositiveLengthMeasure(height),
-                new IfcLengthMeasure(topBaseOffset));
+        IfcPolyline trapezium = new IfcPolyline(new IfcCartesianPoint(
+                obj.getRadius1() - obj.getThickness(), 0),
+                                                new IfcCartesianPoint(obj.getRadius1(),
+                                                                      0),
+                                                new IfcCartesianPoint(obj.getRadius2(),
+                                                                      obj.getLength()),
+                                                new IfcCartesianPoint(
+                                                        obj.getRadius2() -
+                                                                obj.getThickness(),
+                                                        obj.getLength()));
+        IfcArbitraryClosedProfileDef sweptArea =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 trapezium);
         IfcAxis2Placement3D shellPosition =
                 new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
                                         // the z axis is rotated by PI/2
