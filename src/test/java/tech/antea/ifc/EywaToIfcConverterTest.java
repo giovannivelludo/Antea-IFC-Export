@@ -908,4 +908,394 @@ public class EywaToIfcConverterTest {
         String ifcDataSection = getDataSection(filePath);
         Assert.assertEquals(expectedDataSection, ifcDataSection);
     }
+
+    /**
+     * Tests the conversion of an EywaRoot containing only one ThreeWaysValve.
+     */
+    @Test
+    public void convert_ThreeWaysValve() throws IOException {
+        URL file = r.getResourcesWithLeafName("threewaysvalve.eywa").getURLs()
+                .get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/threewaysvalve.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcRelDecomposes ifcRelAggregates =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
+
+        String expectedDataSection =
+                "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
+                        "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
+                        "#3=IFCORGANIZATION($,'Antea',$,(#2),$);\n" +
+                        "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
+                        "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
+                        "Export'," + "'com.anteash:ifc');\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
+                        "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
+                        "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
+                        "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
+                        "#10=IFCAXIS2PLACEMENT3D(#7,#8,#9);\n" +
+                        "#11=IFCGEOMETRICREPRESENTATIONCONTEXT('Plan'," +
+                        "'Model',3,1" + ".0E-8,#10,$);\n" +
+                        "#12=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);\n" +
+                        "#13=IFCSIUNIT(*,.AREAUNIT.,.MILLI.,.SQUARE_METRE.);" +
+                        "\n" +
+                        "#14=IFCSIUNIT(*,.VOLUMEUNIT.,.MILLI.,.CUBIC_METRE.);" +
+                        "\n" +
+                        "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
+                        "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$,.COMPLEX" + ".,$,$,$,$,$);\n" +
+                        "#19=IFCLOCALPLACEMENT($,#10);\n" +
+                        "#20=IFCCARTESIANPOINT((0.0,0.0));\n" +
+                        "#21=IFCCARTESIANPOINT((84.14,0.0));\n" +
+                        "#22=IFCCARTESIANPOINT((0.0,649.17));\n" +
+                        "#23=IFCPOLYLINE((#20,#21,#22));\n" +
+                        "#24=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#23);\n" +
+                        "#25=IFCCARTESIANPOINT((0.0,0.0,1298.34));\n" +
+                        "#26=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#27=IFCAXIS2PLACEMENT3D(#25,#26,#9);\n" +
+                        "#28=IFCAXIS1PLACEMENT(#7,#26);\n" +
+                        "#29=IFCREVOLVEDAREASOLID(#24,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#30=IFCCARTESIANPOINT((84.04,0.0));\n" +
+                        "#31=IFCCARTESIANPOINT((0.0,648.3984644639886));\n" +
+                        "#32=IFCPOLYLINE((#20,#30,#31));\n" +
+                        "#33=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#32);\n" +
+                        "#34=IFCREVOLVEDAREASOLID(#33,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#35=IFCBOOLEANRESULT(.DIFFERENCE.,#29,#34);\n" +
+                        "#36=IFCDIRECTION((1.0,0.0));\n" +
+                        "#37=IFCAXIS2PLACEMENT2D(#20,#36);\n" +
+                        "#38=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,100.0);\n" +
+                        "#39=IFCEXTRUDEDAREASOLID(#38,#10,#8,30.0);\n" +
+                        "#40=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#41=IFCAXIS2PLACEMENT3D(#7,#40,#9);\n" +
+                        "#42=IFCREVOLVEDAREASOLID(#24,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#43=IFCBOOLEANRESULT(.DIFFERENCE.,#39,#42);\n" +
+                        "#44=IFCREVOLVEDAREASOLID(#33,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#45=IFCBOOLEANRESULT(.DIFFERENCE.,#42,#44);\n" +
+                        "#46=IFCCARTESIANPOINT((0.0,0.0,1268.34));\n" +
+                        "#47=IFCAXIS2PLACEMENT3D(#46,#8,#9);\n" +
+                        "#48=IFCEXTRUDEDAREASOLID(#38,#47,#8,30.0);\n" +
+                        "#49=IFCBOOLEANRESULT(.DIFFERENCE.,#48,#29);\n" +
+                        "#50=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,84.14);\n" +
+                        "#51=IFCCARTESIANPOINT((0.0,0.0,649.17));\n" +
+                        "#52=IFCAXIS2PLACEMENT3D(#51,#40,#9);\n" +
+                        "#53=IFCREVOLVEDAREASOLID(#50,#52,#28,3" +
+                        ".141592653589793);\n" +
+                        "#54=IFCBOOLEANRESULT(.UNION.,#42,#29);\n" +
+                        "#55=IFCBOOLEANRESULT(.DIFFERENCE.,#53,#54);\n" +
+                        "#56=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#35," +
+                        "#43,#45," + "#49,#55));\n" +
+                        "#57=IFCPRODUCTDEFINITIONSHAPE($,$,(#56));\n" +
+                        "#58=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Valve','{\\X\\0A  " +
+                        "\"CATEGORY\" : \"TUBVALVOLE\",\\X\\0A  \"ADESCR\" : " +
+                        "\"VL5292556\",\\X\\0A  \"IACCESSO\" : " +
+                        "\"0-Sconoscuito\"," +
+                        "\\X\\0A  \"NDIAMETRO\" : 168.28,\\X\\0A  " +
+                        "\"ITIPO_VALVOLA\" :" +
+                        " \"1-VALVE_STD\",\\X\\0A  \"ITIPO_COLL\" : " +
+                        "\"0-COLL_FLANGIATO\",\\X\\0A  \"IOVOLANTINO\" : " +
+                        "\"0-Alto\"," +
+                        "\\X\\0A  \"ASCHEDULE\" : \"120\",\\X\\0A  \"ISTATO\"" +
+                        " : " +
+                        "\"0-APERTA\",\\X\\0A  \"ITIPO_STD\" : \"0-ANSI\"," +
+                        "\\X\\0A  " +
+                        "\"ITIPO_FAMSPEC\" : \"\",\\X\\0A  \"AGRUPPO_SCH\" : " +
+                        "\"03D\"\\X\\0A}',$,#19,#57,.PRODUCT.,$);\n" +
+                        "#59=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() +
+                        ",#6,'Site to geometries link',$," + "(#58),#18);\n" +
+                        "#60=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() +
+                        ",#6,'Project to" + " site link',$,#17,(#18));\n" +
+                        "ENDSEC;\n";
+
+        String ifcDataSection = getDataSection(filePath);
+        Assert.assertEquals(expectedDataSection, ifcDataSection);
+    }
+
+    /**
+     * Tests the conversion of an EywaRoot containing only one FourWaysValve.
+     */
+    @Test
+    public void convert_FourWaysValve() throws IOException {
+        URL file = r.getResourcesWithLeafName("fourwaysvalve.eywa").getURLs()
+                .get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/fourwaysvalve.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcRelDecomposes ifcRelAggregates =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
+
+        String expectedDataSection =
+                "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
+                        "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
+                        "#3=IFCORGANIZATION($,'Antea',$,(#2),$);\n" +
+                        "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
+                        "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
+                        "Export'," + "'com.anteash:ifc');\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
+                        "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
+                        "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
+                        "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
+                        "#10=IFCAXIS2PLACEMENT3D(#7,#8,#9);\n" +
+                        "#11=IFCGEOMETRICREPRESENTATIONCONTEXT('Plan'," +
+                        "'Model',3,1" + ".0E-8,#10,$);\n" +
+                        "#12=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);\n" +
+                        "#13=IFCSIUNIT(*,.AREAUNIT.,.MILLI.,.SQUARE_METRE.);" +
+                        "\n" +
+                        "#14=IFCSIUNIT(*,.VOLUMEUNIT.,.MILLI.,.CUBIC_METRE.);" +
+                        "\n" +
+                        "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
+                        "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$,.COMPLEX" + ".,$,$,$,$,$);\n" +
+                        "#19=IFCLOCALPLACEMENT($,#10);\n" +
+                        "#20=IFCCARTESIANPOINT((0.0,0.0));\n" +
+                        "#21=IFCCARTESIANPOINT((84.14,0.0));\n" +
+                        "#22=IFCCARTESIANPOINT((0.0,649.17));\n" +
+                        "#23=IFCPOLYLINE((#20,#21,#22));\n" +
+                        "#24=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#23);\n" +
+                        "#25=IFCCARTESIANPOINT((0.0,0.0,1298.34));\n" +
+                        "#26=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#27=IFCAXIS2PLACEMENT3D(#25,#26,#9);\n" +
+                        "#28=IFCAXIS1PLACEMENT(#7,#26);\n" +
+                        "#29=IFCREVOLVEDAREASOLID(#24,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#30=IFCCARTESIANPOINT((84.04,0.0));\n" +
+                        "#31=IFCCARTESIANPOINT((0.0,648.3984644639886));\n" +
+                        "#32=IFCPOLYLINE((#20,#30,#31));\n" +
+                        "#33=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#32);\n" +
+                        "#34=IFCREVOLVEDAREASOLID(#33,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#35=IFCBOOLEANRESULT(.DIFFERENCE.,#29,#34);\n" +
+                        "#36=IFCDIRECTION((1.0,0.0));\n" +
+                        "#37=IFCAXIS2PLACEMENT2D(#20,#36);\n" +
+                        "#38=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,100.0);\n" +
+                        "#39=IFCEXTRUDEDAREASOLID(#38,#10,#8,30.0);\n" +
+                        "#40=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#41=IFCAXIS2PLACEMENT3D(#7,#40,#9);\n" +
+                        "#42=IFCREVOLVEDAREASOLID(#24,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#43=IFCBOOLEANRESULT(.DIFFERENCE.,#39,#42);\n" +
+                        "#44=IFCREVOLVEDAREASOLID(#33,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#45=IFCBOOLEANRESULT(.DIFFERENCE.,#42,#44);\n" +
+                        "#46=IFCCARTESIANPOINT((0.0,0.0,1268.34));\n" +
+                        "#47=IFCAXIS2PLACEMENT3D(#46,#8,#9);\n" +
+                        "#48=IFCEXTRUDEDAREASOLID(#38,#47,#8,30.0);\n" +
+                        "#49=IFCBOOLEANRESULT(.DIFFERENCE.,#48,#29);\n" +
+                        "#50=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,84.14);\n" +
+                        "#51=IFCCARTESIANPOINT((0.0,0.0,649.17));\n" +
+                        "#52=IFCAXIS2PLACEMENT3D(#51,#40,#9);\n" +
+                        "#53=IFCREVOLVEDAREASOLID(#50,#52,#28,3" +
+                        ".141592653589793);\n" +
+                        "#54=IFCBOOLEANRESULT(.UNION.,#42,#29);\n" +
+                        "#55=IFCBOOLEANRESULT(.DIFFERENCE.,#53,#54);\n" +
+                        "#56=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#35," +
+                        "#43,#45," + "#49,#55));\n" +
+                        "#57=IFCPRODUCTDEFINITIONSHAPE($,$,(#56));\n" +
+                        "#58=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Valve','{\\X\\0A  " +
+                        "\"CATEGORY\" : \"TUBVALVOLE\",\\X\\0A  \"ADESCR\" : " +
+                        "\"VL5292556\",\\X\\0A  \"IACCESSO\" : " +
+                        "\"0-Sconoscuito\"," +
+                        "\\X\\0A  \"NDIAMETRO\" : 168.28,\\X\\0A  " +
+                        "\"ITIPO_VALVOLA\" :" +
+                        " \"1-VALVE_STD\",\\X\\0A  \"ITIPO_COLL\" : " +
+                        "\"0-COLL_FLANGIATO\",\\X\\0A  \"IOVOLANTINO\" : " +
+                        "\"0-Alto\"," +
+                        "\\X\\0A  \"ASCHEDULE\" : \"120\",\\X\\0A  \"ISTATO\"" +
+                        " : " +
+                        "\"0-APERTA\",\\X\\0A  \"ITIPO_STD\" : \"0-ANSI\"," +
+                        "\\X\\0A  " +
+                        "\"ITIPO_FAMSPEC\" : \"\",\\X\\0A  \"AGRUPPO_SCH\" : " +
+                        "\"03D\"\\X\\0A}',$,#19,#57,.PRODUCT.,$);\n" +
+                        "#59=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() +
+                        ",#6,'Site to geometries link',$," + "(#58),#18);\n" +
+                        "#60=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() +
+                        ",#6,'Project to" + " site link',$,#17,(#18));\n" +
+                        "ENDSEC;\n";
+
+        String ifcDataSection = getDataSection(filePath);
+        Assert.assertEquals(expectedDataSection, ifcDataSection);
+    }
+
+    /**
+     * Tests the conversion of an EywaRoot containing only one OrthoValve.
+     */
+    @Test
+    public void convert_OrthoValve() throws IOException {
+        URL file =
+                r.getResourcesWithLeafName("orthovalve.eywa").getURLs().get(0);
+        EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
+
+        EywaToIfcConverter builder = new EywaToIfcConverter();
+        EywaReader reader = new EywaReader(builder);
+        reader.convert(eywaRoot);
+        IfcProject result = builder.getResult();
+        String filePath = "./ifc-out/orthovalve.ifc";
+        EywaToIfcConverter.writeToFile(result, filePath);
+
+        IfcTimeStamp modifiedDate =
+                result.getOwnerHistory().getLastModifiedDate();
+        IfcTimeStamp creationDate = result.getOwnerHistory().getCreationDate();
+        IfcRelDecomposes ifcRelAggregates =
+                result.getIsDecomposedBy().iterator().next();
+        IfcSite ifcSite =
+                (IfcSite) ifcRelAggregates.getRelatedObjects().iterator()
+                        .next();
+        IfcRelContainedInSpatialStructure ifcRelContainedInSpatialStructure =
+                ifcSite.getContainsElements().iterator().next();
+        IfcProxy ifcProxy = (IfcProxy) ifcRelContainedInSpatialStructure
+                .getRelatedElements().iterator().next();
+
+        String expectedDataSection =
+                "DATA;\n" + "#1=IFCPERSON($,$,'',$,$,$,$,$);\n" +
+                        "#2=IFCACTORROLE(.CONSULTANT.,$,$);\n" +
+                        "#3=IFCORGANIZATION($,'Antea',$,(#2),$);\n" +
+                        "#4=IFCPERSONANDORGANIZATION(#1,#3,$);\n" +
+                        "#5=IFCAPPLICATION(#3,'0.0.1-SNAPSHOT','Antea IFC " +
+                        "Export'," + "'com.anteash:ifc');\n" +
+                        "#6=IFCOWNERHISTORY(#4,#5,$,.ADDED.," +
+                        modifiedDate.serialize() + ",#4,#5," +
+                        creationDate.serialize() + ");\n" +
+                        "#7=IFCCARTESIANPOINT((0.0,0.0,0.0));\n" +
+                        "#8=IFCDIRECTION((0.0,0.0,1.0));\n" +
+                        "#9=IFCDIRECTION((1.0,0.0,0.0));\n" +
+                        "#10=IFCAXIS2PLACEMENT3D(#7,#8,#9);\n" +
+                        "#11=IFCGEOMETRICREPRESENTATIONCONTEXT('Plan'," +
+                        "'Model',3,1" + ".0E-8,#10,$);\n" +
+                        "#12=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);\n" +
+                        "#13=IFCSIUNIT(*,.AREAUNIT.,.MILLI.,.SQUARE_METRE.);" +
+                        "\n" +
+                        "#14=IFCSIUNIT(*,.VOLUMEUNIT.,.MILLI.,.CUBIC_METRE.);" +
+                        "\n" +
+                        "#15=IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.);\n" +
+                        "#16=IFCUNITASSIGNMENT((#12,#13,#14,#15));\n" +
+                        "#17=IFCPROJECT(" + result.getGlobalId().serialize() +
+                        ",#6," + "'05-190-0-VL-001',$,$,$,$,(#11),#16);\n" +
+                        "#18=IFCSITE(" + ifcSite.getGlobalId().serialize() +
+                        ",#6,$,$,$,$,$,$,.COMPLEX" + ".,$,$,$,$,$);\n" +
+                        "#19=IFCLOCALPLACEMENT($,#10);\n" +
+                        "#20=IFCCARTESIANPOINT((0.0,0.0));\n" +
+                        "#21=IFCCARTESIANPOINT((84.14,0.0));\n" +
+                        "#22=IFCCARTESIANPOINT((0.0,649.17));\n" +
+                        "#23=IFCPOLYLINE((#20,#21,#22));\n" +
+                        "#24=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#23);\n" +
+                        "#25=IFCCARTESIANPOINT((0.0,0.0,1298.34));\n" +
+                        "#26=IFCDIRECTION((0.0,1.0,0.0));\n" +
+                        "#27=IFCAXIS2PLACEMENT3D(#25,#26,#9);\n" +
+                        "#28=IFCAXIS1PLACEMENT(#7,#26);\n" +
+                        "#29=IFCREVOLVEDAREASOLID(#24,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#30=IFCCARTESIANPOINT((84.04,0.0));\n" +
+                        "#31=IFCCARTESIANPOINT((0.0,648.3984644639886));\n" +
+                        "#32=IFCPOLYLINE((#20,#30,#31));\n" +
+                        "#33=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#32);\n" +
+                        "#34=IFCREVOLVEDAREASOLID(#33,#27,#28,6" +
+                        ".283185307179586);\n" +
+                        "#35=IFCBOOLEANRESULT(.DIFFERENCE.,#29,#34);\n" +
+                        "#36=IFCDIRECTION((1.0,0.0));\n" +
+                        "#37=IFCAXIS2PLACEMENT2D(#20,#36);\n" +
+                        "#38=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,100.0);\n" +
+                        "#39=IFCEXTRUDEDAREASOLID(#38,#10,#8,30.0);\n" +
+                        "#40=IFCDIRECTION((0.0,-1.0,0.0));\n" +
+                        "#41=IFCAXIS2PLACEMENT3D(#7,#40,#9);\n" +
+                        "#42=IFCREVOLVEDAREASOLID(#24,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#43=IFCBOOLEANRESULT(.DIFFERENCE.,#39,#42);\n" +
+                        "#44=IFCREVOLVEDAREASOLID(#33,#41,#28,6" +
+                        ".283185307179586);\n" +
+                        "#45=IFCBOOLEANRESULT(.DIFFERENCE.,#42,#44);\n" +
+                        "#46=IFCCARTESIANPOINT((0.0,0.0,1268.34));\n" +
+                        "#47=IFCAXIS2PLACEMENT3D(#46,#8,#9);\n" +
+                        "#48=IFCEXTRUDEDAREASOLID(#38,#47,#8,30.0);\n" +
+                        "#49=IFCBOOLEANRESULT(.DIFFERENCE.,#48,#29);\n" +
+                        "#50=IFCCIRCLEPROFILEDEF(.AREA.,$,#37,84.14);\n" +
+                        "#51=IFCCARTESIANPOINT((0.0,0.0,649.17));\n" +
+                        "#52=IFCAXIS2PLACEMENT3D(#51,#40,#9);\n" +
+                        "#53=IFCREVOLVEDAREASOLID(#50,#52,#28,3" +
+                        ".141592653589793);\n" +
+                        "#54=IFCBOOLEANRESULT(.UNION.,#42,#29);\n" +
+                        "#55=IFCBOOLEANRESULT(.DIFFERENCE.,#53,#54);\n" +
+                        "#56=IFCSHAPEREPRESENTATION(#11,'Body','CSG',(#35," +
+                        "#43,#45," + "#49,#55));\n" +
+                        "#57=IFCPRODUCTDEFINITIONSHAPE($,$,(#56));\n" +
+                        "#58=IFCPROXY(" + ifcProxy.getGlobalId().serialize() +
+                        ",#6,'Valve','{\\X\\0A  " +
+                        "\"CATEGORY\" : \"TUBVALVOLE\",\\X\\0A  \"ADESCR\" : " +
+                        "\"VL5292556\",\\X\\0A  \"IACCESSO\" : " +
+                        "\"0-Sconoscuito\"," +
+                        "\\X\\0A  \"NDIAMETRO\" : 168.28,\\X\\0A  " +
+                        "\"ITIPO_VALVOLA\" :" +
+                        " \"1-VALVE_STD\",\\X\\0A  \"ITIPO_COLL\" : " +
+                        "\"0-COLL_FLANGIATO\",\\X\\0A  \"IOVOLANTINO\" : " +
+                        "\"0-Alto\"," +
+                        "\\X\\0A  \"ASCHEDULE\" : \"120\",\\X\\0A  \"ISTATO\"" +
+                        " : " +
+                        "\"0-APERTA\",\\X\\0A  \"ITIPO_STD\" : \"0-ANSI\"," +
+                        "\\X\\0A  " +
+                        "\"ITIPO_FAMSPEC\" : \"\",\\X\\0A  \"AGRUPPO_SCH\" : " +
+                        "\"03D\"\\X\\0A}',$,#19,#57,.PRODUCT.,$);\n" +
+                        "#59=IFCRELCONTAINEDINSPATIALSTRUCTURE" + "(" +
+                        ifcRelContainedInSpatialStructure.getGlobalId()
+                                .serialize() +
+                        ",#6,'Site to geometries link',$," + "(#58),#18);\n" +
+                        "#60=IFCRELAGGREGATES(" +
+                        ifcRelAggregates.getGlobalId().serialize() +
+                        ",#6,'Project to" + " site link',$,#17,(#18));\n" +
+                        "ENDSEC;\n";
+
+        String ifcDataSection = getDataSection(filePath);
+        Assert.assertEquals(expectedDataSection, ifcDataSection);
+    }
 }

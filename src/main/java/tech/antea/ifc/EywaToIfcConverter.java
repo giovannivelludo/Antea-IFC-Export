@@ -345,23 +345,239 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
-     * @param values The array to read.
-     * @return The minimum value in the array.
+     * @param values The list to read.
+     * @return The minimum value in the list. If the list contains all null
+     * elements, null will be returned.
      *
      * @throws NullPointerException     If values is null.
      * @throws IllegalArgumentException If values is empty.
      */
-    private static double min(@NonNull double... values) {
-        if (values.length == 0) {
+    private static Double min(@NonNull List<Double> values) {
+        if (values.size() == 0) {
             throw new IllegalArgumentException("values is empty");
         }
-        double min = values[0];
-        for (double value : values) {
-            if (value < min) {
-                min = value;
+        int i = 0;
+        Double min = null;
+        while (i < values.size()) {
+            Double current = values.get(i);
+            if (current != null) {
+                min = current;
+                i++;
+                break;
             }
+            i++;
+        }
+        while (i < values.size()) {
+            Double current = values.get(i);
+            if (current != null && current < min) {
+                min = current;
+            }
+            i++;
         }
         return min;
+    }
+
+    /**
+     * Given the parameters of 4 valve outputs, creates the Set of
+     * IfcBooleanResult items that represent the valve.
+     *
+     * @param outputs      The 4 valve outputs, where {@code outputs[0]} is the
+     *                     bottom one and others follow anticlockwise. If an
+     *                     output is not present it must be null.
+     * @param objThickness Thickness of the valve outputs.
+     * @return The set of IfcBooleanResult geometries representing the valve.
+     *
+     * @throws NullPointerException     If outputs is null, if {@code
+     *                                  outputs[0]} is null (because all kinds
+     *                                  of valves have the bottom output).
+     * @throws IllegalArgumentException If outputs doesn't have exactly 4
+     *                                  elements.
+     */
+    private static Set<IfcRepresentationItem> buildValve(@NonNull ValveOutput[] outputs,
+                                                         Double objThickness) {
+        if (outputs[0] == null) {
+            throw new NullPointerException("outputs[0] cannot be null");
+        }
+        if (outputs.length != 4) {
+            throw new IllegalArgumentException(
+                    "outputs must contain exactly 4 elements");
+        }
+        // default thickness is 0.1
+        double thickness = objThickness == null || objThickness == 0d ||
+                objThickness == -0d ? 0.1 : objThickness;
+        // we'll have at most 1 sphere, 4 cones and 4 flanges
+        Set<IfcRepresentationItem> valveItems = new HashSet<>(9);
+        List<Double> possibleSphereRadiuses = new ArrayList<>(8);
+
+        for (byte i = 0; i < outputs.length; i++) {
+            if (outputs[i] != null) {
+                valveItems.addAll(buildValveOutput(i,
+                                                   thickness,
+                                                   outputs[i].radius,
+                                                   outputs[i].length,
+                                                   outputs[i].crownRadius,
+                                                   outputs[i].crownThickness,
+                                                   outputs[0].length));
+                possibleSphereRadiuses.add(outputs[i].radius);
+                possibleSphereRadiuses.add(outputs[i].length);
+            }
+        }
+        // creating the central sphere
+        IfcAxis2Placement2D circlePosition = new IfcAxis2Placement2D(0, 0);
+        IfcPositiveLengthMeasure circleRadius =
+                new IfcPositiveLengthMeasure(min(possibleSphereRadiuses));
+        IfcCircleProfileDef circle =
+                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
+                                        null,
+                                        circlePosition,
+                                        circleRadius);
+        IfcAxis2Placement3D spherePosition =
+                new IfcAxis2Placement3D(0, 0, outputs[0].length);
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
+                                                               spherePosition,
+                                                               rotationAxis,
+                                                               new IfcPlaneAngleMeasure(
+                                                                       PI));
+        // all items in valveItems must be of type IfcBooleanResult, because
+        // when they'll be put in an IfcShapeRepresentation their type will
+        // have to be according to representationType "CSG"; so we have to
+        // merge sphere with an object from valveItems
+        IfcBooleanResult sphereWrapper =
+                new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                     sphere,
+                                     (IfcBooleanOperand) valveItems.iterator()
+                                             .next());
+        valveItems.add(sphereWrapper);
+        return valveItems;
+    }
+
+    /**
+     * Builds a valve output according to the given parameters.
+     *
+     * @param position       0 indicates the bottom output, others follow
+     *                       anticlockwise.
+     * @param thickness      Thickness of the valve.
+     * @param radius         Radius of the output.
+     * @param length         Length of the output.
+     * @param crownRadius    Radius of the crown if the valve is flanged, 0
+     *                       otherwise.
+     * @param crownThickness Thickness of the crown if the valve is flanged, 0
+     *                       otherwise.
+     * @param output0Length  Length of the bottom output, needed to place other
+     *                       outputs correctly.
+     * @return The Set containing the IfcBooleanResult geometries composing the
+     * output.
+     */
+    private static Set<IfcRepresentationItem> buildValveOutput(byte position,
+                                                               double thickness,
+                                                               double radius,
+                                                               double length,
+                                                               double crownRadius,
+                                                               double crownThickness,
+                                                               double output0Length) {
+        Set<IfcRepresentationItem> outputItems = new HashSet<>(2);
+
+        // placing the output according to position
+        IfcCartesianPoint location;
+        IfcDirection xAxis;
+        IfcDirection zAxis;
+        if (position == 0) {
+            // bottom output
+            location = new IfcCartesianPoint(0, 0, 0);
+            xAxis = new IfcDirection(1, 0, 0);
+            zAxis = new IfcDirection(0, -1, 0);
+        } else if (position == 1) {
+            // right output
+            location = new IfcCartesianPoint(0, length, output0Length);
+            xAxis = new IfcDirection(1, 0, 0);
+            zAxis = new IfcDirection(0, 0, -1);
+        } else if (position == 2) {
+            // top output
+            location = new IfcCartesianPoint(0, 0, length + output0Length);
+            xAxis = new IfcDirection(1, 0, 0);
+            zAxis = new IfcDirection(0, 1, 0);
+        } else {
+            // left output, all axes are the default ones
+            location = new IfcCartesianPoint(0, -length, output0Length);
+            xAxis = null;
+            // can't be null because it will be used in an IfcAxis1Placement,
+            // where the default axis is (0, 0, 1)
+            zAxis = null;
+        }
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+
+        IfcPolyline outerTriangle = new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                                    new IfcCartesianPoint(radius,
+                                                                          0),
+                                                    new IfcCartesianPoint(0,
+                                                                          length));
+        IfcArbitraryClosedProfileDef outerTriangleWrapper =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 outerTriangle);
+        IfcAxis2Placement3D conePosition =
+                new IfcAxis2Placement3D(location, zAxis, xAxis);
+
+        IfcRevolvedAreaSolid outerCone = new IfcRevolvedAreaSolid(
+                outerTriangleWrapper,
+                conePosition,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
+
+        double innerRadius = radius - thickness;
+        IfcPolyline innerTriangle = new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                                    new IfcCartesianPoint(
+                                                            innerRadius,
+                                                            0),
+                                                    new IfcCartesianPoint(0,
+                                                                          (length /
+                                                                                  radius) *
+                                                                                  innerRadius));
+        IfcArbitraryClosedProfileDef innerTriangleWrapper =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 innerTriangle);
+        IfcRevolvedAreaSolid innerCone = new IfcRevolvedAreaSolid(
+                innerTriangleWrapper,
+                conePosition,
+                rotationAxis,
+                new IfcPlaneAngleMeasure(2 * PI));
+
+        IfcBooleanResult output =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     outerCone,
+                                     innerCone);
+        outputItems.add(output);
+
+        // if flanged
+        if (crownRadius != 0 && crownThickness != 0) {
+            IfcPolyline crownSection =
+                    new IfcPolyline(new IfcCartesianPoint(0, 0),
+                                    new IfcCartesianPoint(crownRadius, 0),
+                                    new IfcCartesianPoint(crownRadius,
+                                                          crownThickness),
+                                    new IfcCartesianPoint(0, crownThickness));
+            IfcArbitraryClosedProfileDef crownSectionWrapper =
+                    new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                     null,
+                                                     crownSection);
+            IfcRevolvedAreaSolid crown = new IfcRevolvedAreaSolid(
+                    crownSectionWrapper,
+                    conePosition,
+                    rotationAxis,
+                    new IfcPlaneAngleMeasure(2 * PI));
+            IfcBooleanResult flange =
+                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                         crown,
+                                         outerCone);
+            outputItems.add(flange);
+        }
+        return outputItems;
     }
 
     /**
@@ -1008,7 +1224,46 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull FourWaysValve obj) {
+        ValveOutput[] outputs = new ValveOutput[4];
+        outputs[0] = new ValveOutput();
+        outputs[1] = new ValveOutput();
+        outputs[2] = new ValveOutput();
+        outputs[3] = new ValveOutput();
+        outputs[0].radius = obj.getRadius1();
+        outputs[0].length = obj.getLength1();
+        outputs[0].crownRadius = obj.getCrownRadius1();
+        outputs[0].crownThickness = obj.getCrownThickness1();
+        outputs[1].radius = obj.getRadius2();
+        outputs[1].length = obj.getLength2();
+        outputs[1].crownRadius = obj.getCrownRadius2();
+        outputs[1].crownThickness = obj.getCrownThickness2();
+        outputs[2].radius = obj.getRadius3();
+        outputs[2].length = obj.getLength3();
+        outputs[2].crownRadius = obj.getCrownRadius3();
+        outputs[2].crownThickness = obj.getCrownThickness3();
+        outputs[3].radius = obj.getRadius4();
+        outputs[3].length = obj.getLength4();
+        outputs[3].crownRadius = obj.getCrownRadius4();
+        outputs[3].crownThickness = obj.getCrownThickness4();
+        Set<IfcRepresentationItem> valveItems =
+                buildValve(outputs, obj.getThickness());
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                valveItems);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy valveProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(valveProxy);
     }
 
     /**
@@ -1239,7 +1494,44 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull OrthoValve obj) {
+        ValveOutput[] outputs = new ValveOutput[4];
+        outputs[0] = new ValveOutput();
+        outputs[1] = new ValveOutput();
+        outputs[0].radius = obj.getRadius1();
+        outputs[0].length = obj.getLength1();
+        outputs[1].radius = obj.getRadius2();
+        outputs[1].length = obj.getLength2();
+        if (obj.getWelded() != null && obj.getWelded()) {
+            outputs[0].crownRadius = obj.getCrownRadius1();
+            outputs[0].crownThickness = obj.getCrownThickness1();
+            outputs[1].crownRadius = obj.getCrownRadius2();
+            outputs[1].crownThickness = obj.getCrownThickness2();
+        } else {
+            outputs[0].crownRadius = 0;
+            outputs[0].crownThickness = 0;
+            outputs[1].crownRadius = 0;
+            outputs[1].crownThickness = 0;
+        }
 
+        Set<IfcRepresentationItem> valveItems =
+                buildValve(outputs, obj.getThickness());
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                valveItems);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy valveProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(valveProxy);
     }
 
     /**
@@ -1446,207 +1738,24 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull ThreeWaysValve obj) {
-
-    }
-
-    /**
-     * @param obj The {@link Valve} to convert.
-     * @throws NullPointerException If {@code obj} is null.
-     * @throws ConversionException  If an error occurs during the serialization
-     *                              of {@link Primitive#getDescription()} in the
-     *                              JSON format.
-     */
-    @Override
-    public void addObject(@NonNull Valve obj) {
-        double thickness =
-                obj.getThickness() == 0d || obj.getThickness() == -0d ? 0.1 :
-                        obj.getThickness();
-        Set<IfcRepresentationItem> valveItems = new HashSet<>(4);
-        // creating the first ouput
-        IfcPolyline outerTriangle1 =
-                new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                new IfcCartesianPoint(obj.getRadius1(), 0),
-                                new IfcCartesianPoint(0, obj.getLength1()));
-        IfcArbitraryClosedProfileDef outerCone1Section =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 outerTriangle1);
-        IfcAxis2Placement3D outerCone1Position =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, -1, 0),
-                                        new IfcDirection(1, 0, 0));
-        IfcAxis1Placement rotationAxis =
-                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                      new IfcDirection(0, 1, 0));
-        IfcRevolvedAreaSolid outerCone1 = new IfcRevolvedAreaSolid(
-                outerCone1Section,
-                outerCone1Position,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
-        double innerRadius1 = obj.getRadius1() - thickness;
-        IfcPolyline innerTriangle1 =
-                new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                new IfcCartesianPoint(innerRadius1, 0),
-                                new IfcCartesianPoint(0,
-                                                      (obj.getLength1() /
-                                                              obj.getRadius1()) *
-                                                              innerRadius1));
-        IfcArbitraryClosedProfileDef innerCone1Section =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 innerTriangle1);
-        IfcAxis2Placement3D innerCone1Position =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, -1, 0),
-                                        new IfcDirection(1, 0, 0));
-        IfcRevolvedAreaSolid innerCone1 = new IfcRevolvedAreaSolid(
-                innerCone1Section,
-                innerCone1Position,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
-        IfcBooleanResult output1 =
-                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                     outerCone1,
-                                     innerCone1);
-        valveItems.add(output1);
-
-        // creating the second output
-        IfcPolyline outerTriangle2 =
-                new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                new IfcCartesianPoint(obj.getRadius2(), 0),
-                                new IfcCartesianPoint(0, obj.getLength2()));
-        IfcArbitraryClosedProfileDef outerCone2Section =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 outerTriangle2);
-        IfcAxis2Placement3D outerCone2Position =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                              0,
-                                                              obj.getLength1() +
-                                                                      obj.getLength2()),
-                                        new IfcDirection(0, 1, 0),
-                                        new IfcDirection(1, 0, 0));
-        IfcRevolvedAreaSolid outerCone2 = new IfcRevolvedAreaSolid(
-                outerCone2Section,
-                outerCone2Position,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
-        double innerRadius2 = obj.getRadius2() - thickness;
-        IfcPolyline innerTriangle2 =
-                new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                new IfcCartesianPoint(innerRadius2, 0),
-                                new IfcCartesianPoint(0,
-                                                      (obj.getLength2() /
-                                                              obj.getRadius2()) *
-                                                              innerRadius2));
-        IfcArbitraryClosedProfileDef innerCone2Section =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 innerTriangle2);
-        IfcAxis2Placement3D innerCone2Position =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                              0,
-                                                              obj.getLength1() +
-                                                                      obj.getLength2()),
-                                        new IfcDirection(0, 1, 0),
-                                        new IfcDirection(1, 0, 0));
-        IfcRevolvedAreaSolid innerCone2 = new IfcRevolvedAreaSolid(
-                innerCone2Section,
-                innerCone2Position,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
-        IfcBooleanResult output2 =
-                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                     outerCone2,
-                                     innerCone2);
-        valveItems.add(output2);
-
-        // creating the sphere
-        IfcAxis2Placement2D circlePosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
-                                        new IfcDirection(1, 0));
-        IfcPositiveLengthMeasure circleRadius =
-                new IfcPositiveLengthMeasure(min(obj.getLength1(),
-                                                 obj.getLength2(),
-                                                 obj.getRadius1(),
-                                                 obj.getRadius2()));
-        IfcCircleProfileDef circle =
-                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
-                                        null,
-                                        circlePosition,
-                                        circleRadius);
-        IfcAxis2Placement3D spherePosition =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                              0,
-                                                              obj.getLength1()),
-                                        new IfcDirection(0, -1, 0),
-                                        new IfcDirection(1, 0, 0));
-        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
-                                                               spherePosition,
-                                                               rotationAxis,
-                                                               new IfcPlaneAngleMeasure(
-                                                                       PI));
-        IfcBooleanResult cutSphere =
-                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                     sphere,
-                                     new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                                          outerCone1,
-                                                          outerCone2));
-        valveItems.add(cutSphere);
-
-        if (obj.getFlanged() != null && obj.getFlanged().equals(true)) {
-            IfcAxis2Placement2D crownSectionPosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
-            IfcCircleProfileDef crownSection1 = new IfcCircleProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    crownSectionPosition,
-                    new IfcPositiveLengthMeasure(obj.getCrownRadius1()));
-            IfcAxis2Placement3D crownPosition1 =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
-            IfcExtrudedAreaSolid crown1 =
-                    new IfcExtrudedAreaSolid(crownSection1,
-                                             crownPosition1,
-                                             new IfcDirection(0, 0, 1),
-                                             new IfcLengthMeasure(obj.getCrownThickness1()));
-            IfcBooleanResult flange1 =
-                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                         crown1,
-                                         outerCone1);
-
-            IfcCircleProfileDef crownSection2 = new IfcCircleProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    crownSectionPosition,
-                    new IfcPositiveLengthMeasure(obj.getCrownRadius2()));
-            IfcAxis2Placement3D crownPosition2 =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                                  0,
-                                                                  obj.getLength1() +
-                                                                          obj.getLength2() -
-                                                                          obj.getCrownThickness2()),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
-            IfcExtrudedAreaSolid crown2 =
-                    new IfcExtrudedAreaSolid(crownSection2,
-                                             crownPosition2,
-                                             new IfcDirection(0, 0, 1),
-                                             new IfcLengthMeasure(obj.getCrownThickness2()));
-            IfcBooleanResult flange2 =
-                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                         crown2,
-                                         outerCone2);
-
-            valveItems.add(flange1);
-            valveItems.add(flange2);
-        }
+        ValveOutput[] outputs = new ValveOutput[4];
+        outputs[0] = new ValveOutput();
+        outputs[1] = new ValveOutput();
+        outputs[2] = new ValveOutput();
+        outputs[0].radius = obj.getRadius1();
+        outputs[0].length = obj.getLength1();
+        outputs[0].crownRadius = obj.getCrownRadius1();
+        outputs[0].crownThickness = obj.getCrownThickness1();
+        outputs[1].radius = obj.getRadius2();
+        outputs[1].length = obj.getLength2();
+        outputs[1].crownRadius = obj.getCrownRadius2();
+        outputs[1].crownThickness = obj.getCrownThickness2();
+        outputs[2].radius = obj.getRadius3();
+        outputs[2].length = obj.getLength3();
+        outputs[2].crownRadius = obj.getCrownRadius3();
+        outputs[2].crownThickness = obj.getCrownThickness3();
+        Set<IfcRepresentationItem> valveItems =
+                buildValve(outputs, obj.getThickness());
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -1664,5 +1773,64 @@ public class EywaToIfcConverter implements EywaConverter {
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(valveProxy);
+    }
+
+    /**
+     * @param obj The {@link Valve} to convert.
+     * @throws NullPointerException If {@code obj} is null.
+     * @throws ConversionException  If an error occurs during the serialization
+     *                              of {@link Primitive#getDescription()} in the
+     *                              JSON format.
+     */
+    @Override
+    public void addObject(@NonNull Valve obj) {
+        ValveOutput[] outputs = new ValveOutput[4];
+        outputs[0] = new ValveOutput();
+        outputs[2] = new ValveOutput();
+        outputs[0].radius = obj.getRadius1();
+        outputs[0].length = obj.getLength1();
+        outputs[2].radius = obj.getRadius2();
+        outputs[2].length = obj.getLength2();
+        if (obj.getFlanged() != null && obj.getFlanged()) {
+            outputs[0].crownRadius = obj.getCrownRadius1();
+            outputs[0].crownThickness = obj.getCrownThickness1();
+            outputs[2].crownRadius = obj.getCrownRadius2();
+            outputs[2].crownThickness = obj.getCrownThickness2();
+        } else {
+            outputs[0].crownRadius = 0;
+            outputs[0].crownThickness = 0;
+            outputs[2].crownRadius = 0;
+            outputs[2].crownThickness = 0;
+        }
+        Set<IfcRepresentationItem> valveItems =
+                buildValve(outputs, obj.getThickness());
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                valveItems);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy valveProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(valveProxy);
+    }
+
+    /**
+     * The parameters needed to build a valve output. If an output is not
+     * flanged, {@code crownRadius} and {@code crownThickness} must be 0.
+     */
+    private static class ValveOutput {
+        double radius;
+        double length;
+        double crownRadius;
+        double crownThickness;
     }
 }
