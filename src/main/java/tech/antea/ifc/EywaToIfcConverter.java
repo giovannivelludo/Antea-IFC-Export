@@ -43,7 +43,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static java.lang.Math.PI;
+import static java.lang.Math.*;
 
 public class EywaToIfcConverter implements EywaConverter {
 
@@ -1759,7 +1759,127 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Tee obj) {
+        IfcAxis2Placement2D sectionsPlacement = new IfcAxis2Placement2D(0, 0);
 
+        IfcCircleProfileDef outerPipe1Section = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(obj.getRadius1()));
+        IfcExtrudedAreaSolid outerPipe1 = new IfcExtrudedAreaSolid(
+                outerPipe1Section,
+                new IfcAxis2Placement3D(0, 0, 0),
+                new IfcDirection(0, 0, -1),
+                new IfcLengthMeasure(obj.getLength1()));
+        IfcCircleProfileDef innerPipe1Section = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(
+                        obj.getRadius1() - obj.getThickness()));
+        IfcExtrudedAreaSolid innerPipe1 = new IfcExtrudedAreaSolid(
+                innerPipe1Section,
+                new IfcAxis2Placement3D(0, 0, 0),
+                new IfcDirection(0, 0, -1),
+                new IfcLengthMeasure(obj.getLength1()));
+
+        IfcCircleProfileDef outerPipe2Section = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(obj.getRadius2()));
+        IfcExtrudedAreaSolid outerPipe2 = new IfcExtrudedAreaSolid(
+                outerPipe2Section,
+                new IfcAxis2Placement3D(0, 0, 0),
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(obj.getLength2()));
+        IfcCircleProfileDef innerPipe2Section = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(
+                        obj.getRadius2() - obj.getThickness()));
+        IfcExtrudedAreaSolid innerPipe2 = new IfcExtrudedAreaSolid(
+                innerPipe2Section,
+                new IfcAxis2Placement3D(0, 0, 0),
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(obj.getLength2()));
+
+        IfcBooleanResult outerPipe =
+                new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                     outerPipe1,
+                                     outerPipe2);
+        IfcBooleanResult innerPipe =
+                new IfcBooleanResult(IfcBooleanOperator.UNION,
+                                     innerPipe1,
+                                     innerPipe2);
+        IfcBooleanResult pipe =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     outerPipe,
+                                     innerPipe);
+
+
+        double derivationThickness =
+                obj.getDerivationThickness() == null ? obj.getThickness() :
+                        obj.getDerivationThickness();
+        IfcAxis2Placement3D derivPipePosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        new IfcDirection(0,
+                                                         cos(obj.getPhi()),
+                                                         sin(obj.getPhi())),
+                                        new IfcDirection(1, 0, 0));
+        IfcCircleProfileDef outerDerivPipeSection = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(obj.getDerivationRadius()));
+        IfcExtrudedAreaSolid outerDerivPipe = new IfcExtrudedAreaSolid(
+                outerDerivPipeSection,
+                derivPipePosition,
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(obj.getDerivationLength()));
+        IfcCircleProfileDef innerDerivPipeSection = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionsPlacement,
+                new IfcPositiveLengthMeasure(
+                        obj.getDerivationRadius() - derivationThickness));
+        IfcExtrudedAreaSolid innerDerivPipe = new IfcExtrudedAreaSolid(
+                innerDerivPipeSection,
+                derivPipePosition,
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(obj.getDerivationLength()));
+
+        IfcBooleanResult derivationPipe = new IfcBooleanResult(
+                IfcBooleanOperator.DIFFERENCE,
+                outerDerivPipe,
+                innerDerivPipe);
+
+
+        derivationPipe = new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                              derivationPipe,
+                                              outerPipe);
+        pipe = new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                    pipe,
+                                    innerDerivPipe);
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                pipe,
+                derivationPipe);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy teeProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(teeProxy);
     }
 
     /**

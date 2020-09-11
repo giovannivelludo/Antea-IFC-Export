@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Tee",
+        "idIm": 1169129167,
+        "name": "Derivazione",
+        "radius": 10.67,
+        "length1": 25.40,
+        "length2": 25.40,
+        "derivationRadius": 10.67,
+        "derivationLength": 25.40,
+        "phi": 0.50,
+        "thickness": 4.78,
+        "lining": 0.00,
+        "description": {
+          "CATEGORY": "TUBDIRAME",
+          "ADESCR": "New",
+          "NDIAMETRO1": 21.34,
+          "NCOR_ALLOW": 3,
+          "ASCHEDULE": "160",
+          "ITIPO_STD": "0-ANSI",
+          "ITIPO_FAMSPEC": "",
+          "AGRUPPO_SCH": "03D",
+          "NSPESS": 4.78,
+          "NDIAMETRO2": 21.34,
+          "NLUNGHEZZA0": 50.7999999999943,
+          "NLUNGHEZZA1": 25.3999999999942
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}
