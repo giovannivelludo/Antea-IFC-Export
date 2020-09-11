@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "type": "eywa 1.0"
+  },
+  "hints": {
+    "unit": 0,
+    "name": "05-190-0-VL-001"
+  },
+  "object": {
+    "type": "Empty",
+    "imid": 1169128132,
+    "children": [
+      {
+        "type": "Ring",
+        "innerRadius": 203.20,
+        "outerRadius": 298.00,
+        "thickness": 3.00,
+        "lining": 0.00,
+        "imId": 1169185561,
+        "name": "guarnizione",
+        "description": {
+          "CATEGORY": "PIASTRECIRC",
+          "ADESCR": "guarnizione",
+          "NDIAMETROINT": 406.4,
+          "NSPESS": 3,
+          "NDIAMETROEST": 596
+        },
+        "matrix": [
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00,
+          0.00,
+          0.00,
+          0.00,
+          0.00,
+          1.00
+        ]
+      }
+    ]
+  }
+}

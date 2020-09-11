@@ -303,7 +303,8 @@ public class EywaToIfcConverter implements EywaConverter {
      * modifies the relativePlacement of the corresponding IfcProduct so that it
      * will be upside-down. {@code unflipped} won't be modified.
      *
-     * @param unflipped The placement of the object to flip.
+     * @param unflipped {@code IfcProduct.ObjectPlacement.RelativePlacement} of
+     *                  the IfcProduct to flip.
      * @param length    The length of the object measured along its z axis
      *                  (which corresponds to the y axis in the Eywa
      *                  specification).
@@ -333,9 +334,9 @@ public class EywaToIfcConverter implements EywaConverter {
                         .mapToDouble(ifcreal -> -ifcreal.getValue()).toArray();
         IfcDirection flippedAxis = new IfcDirection(flippedAxisCoords);
 
-        // this doesn't change the IfcAxis2Placement3D associated to obj
-        // in objPositions, which is used to calculate the location of
-        // children of obj
+        // this doesn't modify the IfcAxis2Placement3D associated to obj
+        // in objPositions, which must not be modified because it's used to
+        // calculate the location of children of obj
         IfcAxis2Placement3D newLocalCoordSys = new IfcAxis2Placement3D(
                 shiftedOrigin,
                 flippedAxis,
@@ -772,8 +773,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                           obj.getCrownThickness()));
             blindItems.add(blind);
         } else {
-            // TODO: find how to calculate plateThickness
-            double plateThickness = obj.getCrownThickness() / 5;
+            double plateThickness = obj.getCrownThickness() / 10;
             // parameters of the bottom cylinder, usually the disc, but when
             // switched == true it's the plate
             double bottomThickness;
@@ -1603,7 +1603,40 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Ring obj) {
+        IfcCircleHollowProfileDef section = new IfcCircleHollowProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                new IfcAxis2Placement2D(0, 0),
+                new IfcPositiveLengthMeasure(obj.getOuterRadius()),
+                new IfcPositiveLengthMeasure(
+                        obj.getOuterRadius() - obj.getInnerRadius()));
+        IfcExtrudedAreaSolid ring = new IfcExtrudedAreaSolid(section,
+                                                             new IfcAxis2Placement3D(
+                                                                     0,
+                                                                     0,
+                                                                     0),
+                                                             new IfcDirection(0,
+                                                                              0,
+                                                                              1),
+                                                             new IfcLengthMeasure(
+                                                                     obj.getThickness()));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                ring);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy ringProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(ringProxy);
     }
 
     /**
