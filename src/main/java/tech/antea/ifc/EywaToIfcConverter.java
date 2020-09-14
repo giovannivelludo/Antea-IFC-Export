@@ -1533,7 +1533,90 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularFlange obj) {
+        IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
+        double halfNeckWidth = obj.getWidth() / 2;
+        double halfNeckDepth = obj.getDepth() / 2;
+        IfcPolyline outerNeckSection = new IfcPolyline(new IfcCartesianPoint(
+                halfNeckWidth,
+                halfNeckDepth),
+                                                       new IfcCartesianPoint(-halfNeckWidth,
+                                                                             halfNeckDepth),
+                                                       new IfcCartesianPoint(-halfNeckWidth,
+                                                                             -halfNeckDepth),
+                                                       new IfcCartesianPoint(
+                                                               halfNeckWidth,
+                                                               -halfNeckDepth));
+        double halfInnerNeckWidth = halfNeckWidth - obj.getThickness();
+        double halfInnerNeckDepth = halfNeckDepth - obj.getThickness();
+        IfcPolyline innerNeckSection = new IfcPolyline(new IfcCartesianPoint(
+                halfInnerNeckWidth,
+                halfInnerNeckDepth),
+                                                       new IfcCartesianPoint(-halfInnerNeckWidth,
+                                                                             halfInnerNeckDepth),
+                                                       new IfcCartesianPoint(-halfInnerNeckWidth,
+                                                                             -halfInnerNeckDepth),
+                                                       new IfcCartesianPoint(
+                                                               halfInnerNeckWidth,
+                                                               -halfInnerNeckDepth));
+        IfcArbitraryProfileDefWithVoids neckSection =
+                new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
+                                                    null,
+                                                    outerNeckSection,
+                                                    innerNeckSection);
+        IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(neckSection,
+                                                             new IfcAxis2Placement3D(
+                                                                     0,
+                                                                     0,
+                                                                     0),
+                                                             extrusionDirection,
+                                                             new IfcLengthMeasure(
+                                                                     obj.getNeck()));
+
+
+        double halfCrownWidth = halfInnerNeckWidth + obj.getCrownWidth();
+        double halfCrownDepth = halfInnerNeckDepth + obj.getCrownDepth();
+        IfcPolyline outerCrownSection = new IfcPolyline(new IfcCartesianPoint(
+                halfCrownWidth,
+                halfCrownDepth),
+                                                        new IfcCartesianPoint(-halfCrownWidth,
+                                                                              halfCrownDepth),
+                                                        new IfcCartesianPoint(-halfCrownWidth,
+                                                                              -halfCrownDepth),
+                                                        new IfcCartesianPoint(
+                                                                halfCrownWidth,
+                                                                -halfCrownDepth));
+        IfcArbitraryProfileDefWithVoids crownSection =
+                new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
+                                                    null,
+                                                    outerCrownSection,
+                                                    innerNeckSection);
+        IfcExtrudedAreaSolid crown = new IfcExtrudedAreaSolid(crownSection,
+                                                              new IfcAxis2Placement3D(
+                                                                      0,
+                                                                      0,
+                                                                      obj.getNeck()),
+                                                              extrusionDirection,
+                                                              new IfcLengthMeasure(
+                                                                      obj.getCrownThickness()));
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                neck,
+                crown);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy rectFlange =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(rectFlange);
     }
 
     /**
