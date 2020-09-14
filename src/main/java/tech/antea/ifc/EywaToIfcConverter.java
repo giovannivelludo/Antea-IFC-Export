@@ -60,9 +60,7 @@ public class EywaToIfcConverter implements EywaConverter {
 
     static {
         IfcAxis2Placement3D worldCoordinateSystem =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
+                new IfcAxis2Placement3D(0, 0, 0);
         GEOMETRIC_REPRESENTATION_CONTEXT =
                 new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
                                                       new IfcLabel("Model"),
@@ -523,7 +521,6 @@ public class EywaToIfcConverter implements EywaConverter {
                                                  outerTriangle);
         IfcAxis2Placement3D conePosition =
                 new IfcAxis2Placement3D(location, zAxis, xAxis);
-
         IfcRevolvedAreaSolid outerCone = new IfcRevolvedAreaSolid(
                 outerTriangleWrapper,
                 conePosition,
@@ -657,10 +654,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcAxis2Placement3D parentPosition = objPositions.get(obj.getParent());
         if (parentPosition == null) {
             // obj is the root object
-            parentPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
+            parentPosition = new IfcAxis2Placement3D(0, 0, 0);
         }
 
         if (obj.getMatrix() != null) {
@@ -748,91 +742,52 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Blind obj) {
-        Set<IfcRepresentationItem> blindItems = new HashSet<>(2);
-        if (obj.getCrownRadius() == null) {
-            // there's no plate
-            IfcAxis2Placement2D basePlacement =
-                    new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
-                                            new IfcDirection(1, 0));
-            IfcCircleProfileDef blindBase = new IfcCircleProfileDef(
+        boolean hasPlate =
+                obj.getCrownRadius() != null && obj.getCrownRadius() != 0;
+        Set<IfcRepresentationItem> blindItems = new HashSet<>(hasPlate ? 2 : 1);
+        double blindRadius = hasPlate ? obj.getCrownRadius() : obj.getRadius();
+        IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
+
+        IfcAxis2Placement2D sectionPlacement = new IfcAxis2Placement2D(0, 0);
+        IfcCircleProfileDef blindSection = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                sectionPlacement,
+                new IfcPositiveLengthMeasure(blindRadius));
+        IfcAxis2Placement3D blindPlacement = new IfcAxis2Placement3D(0, 0, 0);
+        IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindSection,
+                                                              blindPlacement,
+                                                              extrusionDirection,
+                                                              new IfcLengthMeasure(
+                                                                      obj.getCrownThickness()));
+        blindItems.add(blind);
+
+        if (hasPlate) {
+            IfcCircleProfileDef plateSection = new IfcCircleProfileDef(
                     IfcProfileTypeEnum.AREA,
                     null,
-                    basePlacement,
+                    sectionPlacement,
                     new IfcPositiveLengthMeasure(obj.getRadius()));
-            IfcAxis2Placement3D blindPlacement =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
-            IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindBase,
-                                                                  blindPlacement,
-                                                                  new IfcDirection(
-                                                                          0,
-                                                                          0,
-                                                                          1),
+            IfcAxis2Placement3D platePlacement =
+                    new IfcAxis2Placement3D(0, 0, obj.getCrownThickness());
+            IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
+                                                                  platePlacement,
+                                                                  extrusionDirection,
                                                                   new IfcLengthMeasure(
-                                                                          obj.getCrownThickness()));
-            blindItems.add(blind);
-        } else {
-            double plateThickness = obj.getCrownThickness() / 10;
-            // parameters of the bottom cylinder, usually the disc, but when
-            // switched == true it's the plate
-            double bottomThickness;
-            double bottomRadius;
-            // parameters of the top cylinder, which is usually the plate, but
-            // when switched == true it's the disc
-            double topThickness;
-            double topRadius;
-            if (!obj.isSwitched()) {
-                topThickness = plateThickness;
-                topRadius = obj.getRadius();
-                bottomThickness = obj.getCrownThickness();
-                bottomRadius = obj.getCrownRadius();
+                                                                          obj.getCrownThickness() /
+                                                                                  10));
+            blindItems.add(plate);
+        }
+
+        IfcLocalPlacement location = resolveLocation(obj);
+        if (obj.isSwitched()) {
+            double length;
+            if (obj.getCrownRadius() == null) {
+                length = obj.getCrownThickness();
             } else {
-                topThickness = obj.getCrownThickness();
-                topRadius = obj.getCrownRadius();
-                bottomThickness = plateThickness;
-                bottomRadius = obj.getRadius();
+                length = obj.getCrownThickness() + obj.getCrownThickness() / 10;
             }
-            IfcAxis2Placement2D cylinderBasePlacement = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
-
-            IfcCircleProfileDef bottomBase = new IfcCircleProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    cylinderBasePlacement,
-                    new IfcPositiveLengthMeasure(bottomRadius));
-            IfcAxis2Placement3D bottomCylinderPlacement =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
-            IfcExtrudedAreaSolid bottomCylinder = new IfcExtrudedAreaSolid(
-                    bottomBase,
-                    bottomCylinderPlacement,
-                    new IfcDirection(0, 0, 1),
-                    new IfcLengthMeasure(bottomThickness));
-
-            IfcCircleProfileDef topBase = new IfcCircleProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    cylinderBasePlacement,
-                    new IfcPositiveLengthMeasure(topRadius));
-            IfcAxis2Placement3D topCylinderPlacement =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                                  0,
-                                                                  bottomThickness),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
-            IfcExtrudedAreaSolid topCylinder = new IfcExtrudedAreaSolid(topBase,
-                                                                        topCylinderPlacement,
-                                                                        new IfcDirection(
-                                                                                0,
-                                                                                0,
-                                                                                1),
-                                                                        new IfcLengthMeasure(
-                                                                                topThickness));
-            blindItems.add(bottomCylinder);
-            blindItems.add(topCylinder);
+            location = flip(location, length);
         }
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -846,7 +801,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
+                        .objectPlacement(location)
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(blindProxy);
@@ -885,7 +840,6 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Curve obj) {
-        IfcLocalPlacement objPlacement = resolveLocation(obj);
         Double radius = obj.getRadius();
         if (radius == null) {
             if (!obj.getRadius1().equals(obj.getRadius2())) {
@@ -898,19 +852,14 @@ public class EywaToIfcConverter implements EywaConverter {
         }
 
         IfcAxis2Placement2D profilePosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(0,
-                                                              obj.getCurveRadius()),
-                                        new IfcDirection(1, 0));
+                new IfcAxis2Placement2D(0, obj.getCurveRadius());
         IfcCircleHollowProfileDef profile = new IfcCircleHollowProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
                 profilePosition,
                 new IfcPositiveLengthMeasure(radius),
                 new IfcPositiveLengthMeasure(obj.getThickness()));
-        IfcAxis2Placement3D curvePlacement =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
+        IfcAxis2Placement3D curvePlacement = new IfcAxis2Placement3D(0, 0, 0);
         IfcAxis1Placement rotationAxis =
                 new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
                                       new IfcDirection(1, 0, 0));
@@ -932,7 +881,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(objPlacement)
+                        .objectPlacement(resolveLocation(obj))
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(curveProxy);
@@ -1017,9 +966,8 @@ public class EywaToIfcConverter implements EywaConverter {
         boolean hasNeck = obj.getNeck() != null && obj.getNeck() != 0;
 
         if (hasNeck) {
-            IfcAxis2Placement2D neckSectionPosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
+            IfcAxis2Placement2D neckSectionPosition =
+                    new IfcAxis2Placement2D(0, 0);
             IfcCircleHollowProfileDef neckSection =
                     new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
                                                   null,
@@ -1028,10 +976,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                           obj.getRadius()),
                                                   new IfcPositiveLengthMeasure(
                                                           obj.getThickness()));
-            IfcAxis2Placement3D neckPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
+            IfcAxis2Placement3D neckPosition = new IfcAxis2Placement3D(0, 0, 0);
             neck = new IfcExtrudedAreaSolid(neckSection,
                                             neckPosition,
                                             new IfcDirection(0, 0, 1),
@@ -1041,20 +986,15 @@ public class EywaToIfcConverter implements EywaConverter {
         double semiAxis2 = obj.getDish() != null ? obj.getDish() :
                 obj.getCambering() * obj.getRadius();
         if (semiAxis2 == 0) {
-            IfcAxis2Placement2D plateSectionPosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
+            IfcAxis2Placement2D plateSectionPosition =
+                    new IfcAxis2Placement2D(0, 0);
             IfcCircleProfileDef plateSection = new IfcCircleProfileDef(
                     IfcProfileTypeEnum.AREA,
                     null,
                     plateSectionPosition,
                     new IfcPositiveLengthMeasure(obj.getRadius()));
             IfcAxis2Placement3D platePosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                                  0,
-                                                                  obj.getNeck()),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
+                    new IfcAxis2Placement3D(0, 0, obj.getNeck());
             IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
                                                                   platePosition,
                                                                   new IfcDirection(
@@ -1073,13 +1013,11 @@ public class EywaToIfcConverter implements EywaConverter {
                 endplate = plate;
             }
         } else {
-            IfcAxis2Placement2D outerEllipsePosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
+            IfcAxis2Placement2D ellipsePosition = new IfcAxis2Placement2D(0, 0);
             IfcEllipseProfileDef outerEllipse = new IfcEllipseProfileDef(
                     IfcProfileTypeEnum.AREA,
                     null,
-                    outerEllipsePosition,
+                    ellipsePosition,
                     new IfcPositiveLengthMeasure(obj.getRadius()),
                     new IfcPositiveLengthMeasure(semiAxis2));
             IfcAxis2Placement3D outerEllipsoidPosition =
@@ -1099,13 +1037,10 @@ public class EywaToIfcConverter implements EywaConverter {
                                           new IfcDirection(0, 1, 0)),
                     new IfcPlaneAngleMeasure(PI));
 
-            IfcAxis2Placement2D innerEllipsePosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
             IfcEllipseProfileDef innerEllipse = new IfcEllipseProfileDef(
                     IfcProfileTypeEnum.AREA,
                     null,
-                    innerEllipsePosition,
+                    ellipsePosition,
                     new IfcPositiveLengthMeasure(
                             obj.getRadius() - obj.getThickness()),
                     new IfcPositiveLengthMeasure(
@@ -1133,15 +1068,7 @@ public class EywaToIfcConverter implements EywaConverter {
                     innerEllipsoid);
 
             IfcPlane cuttingPlane =
-                    new IfcPlane(new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                                               0,
-                                                                               obj.getNeck()),
-                                                         new IfcDirection(0,
-                                                                          0,
-                                                                          1),
-                                                         new IfcDirection(1,
-                                                                          0,
-                                                                          0)));
+                    new IfcPlane(new IfcAxis2Placement3D(0, 0, obj.getNeck()));
             IfcHalfSpaceSolid halfSpace =
                     new IfcHalfSpaceSolid(cuttingPlane, true);
             IfcBooleanClippingResult halfEllipsoid =
@@ -1320,29 +1247,23 @@ public class EywaToIfcConverter implements EywaConverter {
         double voidRadius = obj.getRadius() - obj.getThickness();
         double raisedFaceRadius =
                 obj.getRadius() + (obj.getCrownRadius() - obj.getRadius()) / 3;
+        IfcAxis2Placement2D sectionPosition = new IfcAxis2Placement2D(0, 0);
+        IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
         if (hasTrunk) {
-            IfcAxis2Placement2D trunkSectionPosition = new IfcAxis2Placement2D(
-                    new IfcCartesianPoint(0, 0),
-                    new IfcDirection(1, 0));
             IfcCircleHollowProfileDef trunkSection =
                     new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
                                                   null,
-                                                  trunkSectionPosition,
+                                                  sectionPosition,
                                                   new IfcPositiveLengthMeasure(
                                                           obj.getRadius()),
                                                   new IfcPositiveLengthMeasure(
                                                           obj.getThickness()));
             IfcAxis2Placement3D trunkPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
+                    new IfcAxis2Placement3D(0, 0, 0);
             IfcExtrudedAreaSolid trunk = new IfcExtrudedAreaSolid(trunkSection,
                                                                   trunkPosition,
-                                                                  new IfcDirection(
-                                                                          0,
-                                                                          0,
-                                                                          1),
+                                                                  extrusionDirection,
                                                                   new IfcLengthMeasure(
                                                                           obj.getTrunkLength()));
             nozzleItems.add(trunk);
@@ -1390,13 +1311,10 @@ public class EywaToIfcConverter implements EywaConverter {
             nozzleItems.add(tang);
         }
 
-        IfcAxis2Placement2D crownSectionPosition =
-                new IfcAxis2Placement2D(new IfcCartesianPoint(0, 0),
-                                        new IfcDirection(1, 0));
         IfcCircleHollowProfileDef crownSection = new IfcCircleHollowProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                crownSectionPosition,
+                sectionPosition,
                 new IfcPositiveLengthMeasure(obj.getCrownRadius()),
                 new IfcPositiveLengthMeasure(
                         obj.getCrownRadius() - voidRadius));
@@ -1408,27 +1326,18 @@ public class EywaToIfcConverter implements EywaConverter {
             crownZOffset += obj.getTangLength();
         }
         IfcAxis2Placement3D crownPosition =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                              0,
-                                                              crownZOffset),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
+                new IfcAxis2Placement3D(0, 0, crownZOffset);
         IfcExtrudedAreaSolid crown = new IfcExtrudedAreaSolid(crownSection,
                                                               crownPosition,
-                                                              new IfcDirection(0,
-                                                                               0,
-                                                                               1),
+                                                              extrusionDirection,
                                                               new IfcLengthMeasure(
                                                                       obj.getCrownThickness()));
         nozzleItems.add(crown);
 
-        IfcAxis2Placement2D raisedFaceSectionPosition = new IfcAxis2Placement2D(
-                new IfcCartesianPoint(0, 0),
-                new IfcDirection(1, 0));
         IfcCircleHollowProfileDef raisedFaceSection =
                 new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
                                               null,
-                                              raisedFaceSectionPosition,
+                                              sectionPosition,
                                               new IfcPositiveLengthMeasure(
                                                       raisedFaceRadius),
                                               new IfcPositiveLengthMeasure(
@@ -1442,15 +1351,11 @@ public class EywaToIfcConverter implements EywaConverter {
             raisedFaceZOffset += obj.getTangLength();
         }
         IfcAxis2Placement3D raisedFacePosition =
-                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                              0,
-                                                              raisedFaceZOffset),
-                                        new IfcDirection(0, 0, 1),
-                                        new IfcDirection(1, 0, 0));
+                new IfcAxis2Placement3D(0, 0, raisedFaceZOffset);
         IfcExtrudedAreaSolid raisedFace = new IfcExtrudedAreaSolid(
                 raisedFaceSection,
                 raisedFacePosition,
-                new IfcDirection(0, 0, 1),
+                extrusionDirection,
                 new IfcLengthMeasure(raisedFaceLength));
         nozzleItems.add(raisedFace);
 
@@ -1871,50 +1776,53 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Tee obj) {
-        IfcAxis2Placement2D sectionsPlacement = new IfcAxis2Placement2D(0, 0);
+        IfcAxis2Placement2D sectionsPosition = new IfcAxis2Placement2D(0, 0);
+        IfcAxis2Placement3D mainPipePosition = new IfcAxis2Placement3D(0, 0, 0);
+        IfcDirection positiveExtrusionDirection = new IfcDirection(0, 0, 1);
+        IfcDirection negativeExtrusionDirection = new IfcDirection(0, 0, -1);
 
         IfcCircleProfileDef outerPipe1Section = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(obj.getRadius1()));
         IfcExtrudedAreaSolid outerPipe1 = new IfcExtrudedAreaSolid(
                 outerPipe1Section,
-                new IfcAxis2Placement3D(0, 0, 0),
-                new IfcDirection(0, 0, -1),
+                mainPipePosition,
+                negativeExtrusionDirection,
                 new IfcLengthMeasure(obj.getLength1()));
         IfcCircleProfileDef innerPipe1Section = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(
                         obj.getRadius1() - obj.getThickness()));
         IfcExtrudedAreaSolid innerPipe1 = new IfcExtrudedAreaSolid(
                 innerPipe1Section,
-                new IfcAxis2Placement3D(0, 0, 0),
-                new IfcDirection(0, 0, -1),
+                mainPipePosition,
+                negativeExtrusionDirection,
                 new IfcLengthMeasure(obj.getLength1()));
 
         IfcCircleProfileDef outerPipe2Section = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(obj.getRadius2()));
         IfcExtrudedAreaSolid outerPipe2 = new IfcExtrudedAreaSolid(
                 outerPipe2Section,
-                new IfcAxis2Placement3D(0, 0, 0),
-                new IfcDirection(0, 0, 1),
+                mainPipePosition,
+                positiveExtrusionDirection,
                 new IfcLengthMeasure(obj.getLength2()));
         IfcCircleProfileDef innerPipe2Section = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(
                         obj.getRadius2() - obj.getThickness()));
         IfcExtrudedAreaSolid innerPipe2 = new IfcExtrudedAreaSolid(
                 innerPipe2Section,
-                new IfcAxis2Placement3D(0, 0, 0),
-                new IfcDirection(0, 0, 1),
+                mainPipePosition,
+                positiveExtrusionDirection,
                 new IfcLengthMeasure(obj.getLength2()));
 
         IfcBooleanResult outerPipe =
@@ -1943,23 +1851,23 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcCircleProfileDef outerDerivPipeSection = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(obj.getDerivationRadius()));
         IfcExtrudedAreaSolid outerDerivPipe = new IfcExtrudedAreaSolid(
                 outerDerivPipeSection,
                 derivPipePosition,
-                new IfcDirection(0, 0, 1),
+                positiveExtrusionDirection,
                 new IfcLengthMeasure(obj.getDerivationLength()));
         IfcCircleProfileDef innerDerivPipeSection = new IfcCircleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
-                sectionsPlacement,
+                sectionsPosition,
                 new IfcPositiveLengthMeasure(
                         obj.getDerivationRadius() - derivationThickness));
         IfcExtrudedAreaSolid innerDerivPipe = new IfcExtrudedAreaSolid(
                 innerDerivPipeSection,
                 derivPipePosition,
-                new IfcDirection(0, 0, 1),
+                positiveExtrusionDirection,
                 new IfcLengthMeasure(obj.getDerivationLength()));
 
         IfcBooleanResult derivationPipe = new IfcBooleanResult(
