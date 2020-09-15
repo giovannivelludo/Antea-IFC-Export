@@ -405,7 +405,7 @@ public class EywaToIfcConverter implements EywaConverter {
         double thickness = objThickness == null || objThickness == 0d ||
                 objThickness == -0d ? 0.1 : objThickness;
         // we'll have at most 1 sphere, 4 cones and 4 flanges
-        Set<IfcRepresentationItem> valveItems = new HashSet<>(9);
+        Set<IfcRepresentationItem> valveItems = new HashSet<>(9, 1);
         List<Double> possibleSphereRadiuses = new ArrayList<>(8);
 
         for (byte i = 0; i < outputs.length; i++) {
@@ -477,7 +477,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                double crownRadius,
                                                                double crownThickness,
                                                                double output0Length) {
-        Set<IfcRepresentationItem> outputItems = new HashSet<>(2);
+        Set<IfcRepresentationItem> outputItems = new HashSet<>(2, 1);
 
         // placing the output according to position
         IfcCartesianPoint location;
@@ -502,8 +502,6 @@ public class EywaToIfcConverter implements EywaConverter {
             // left output, all axes are the default ones
             location = new IfcCartesianPoint(0, -length, output0Length);
             xAxis = null;
-            // can't be null because it will be used in an IfcAxis1Placement,
-            // where the default axis is (0, 0, 1)
             zAxis = null;
         }
         IfcAxis1Placement rotationAxis =
@@ -744,7 +742,8 @@ public class EywaToIfcConverter implements EywaConverter {
     public void addObject(@NonNull Blind obj) {
         boolean hasPlate =
                 obj.getCrownRadius() != null && obj.getCrownRadius() != 0;
-        Set<IfcRepresentationItem> blindItems = new HashSet<>(hasPlate ? 2 : 1);
+        Set<IfcRepresentationItem> blindItems =
+                new HashSet<>(hasPlate ? 2 : 1, 1);
         double blindRadius = hasPlate ? obj.getCrownRadius() : obj.getRadius();
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
@@ -1238,7 +1237,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Nozzle obj) {
-        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(4);
+        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(4, 1);
         boolean hasTrunk =
                 obj.getTrunkLength() != null && obj.getTrunkLength() != 0;
         boolean hasTang =
@@ -1521,7 +1520,81 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularEndplate obj) {
+        IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
+        double neckLength = obj.getLength() - obj.getEndThickness();
+        Set<IfcRepresentationItem> endplateItems =
+                new HashSet<>(neckLength == 0 ? 1 : 2, 1);
 
+        double halfWidth = obj.getWidth() / 2;
+        double halfDepth = obj.getDepth() / 2;
+        IfcPolyline outerRect =
+                new IfcPolyline(new IfcCartesianPoint(halfWidth, halfDepth),
+                                new IfcCartesianPoint(-halfWidth, halfDepth),
+                                new IfcCartesianPoint(-halfWidth, -halfDepth),
+                                new IfcCartesianPoint(halfWidth, -halfDepth));
+        IfcArbitraryClosedProfileDef plateSection =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 outerRect);
+        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
+                                                              new IfcAxis2Placement3D(
+                                                                      0,
+                                                                      0,
+                                                                      neckLength),
+                                                              extrusionDirection,
+                                                              new IfcLengthMeasure(
+                                                                      obj.getEndThickness()));
+        endplateItems.add(plate);
+
+        if (neckLength != 0) {
+            double innerHalfWidth = halfWidth - obj.getThickness();
+            double innerHalfDepth = halfDepth - obj.getThickness();
+            IfcPolyline innerRect = new IfcPolyline(new IfcCartesianPoint(
+                    innerHalfWidth,
+                    innerHalfDepth),
+                                                    new IfcCartesianPoint(-innerHalfWidth,
+                                                                          innerHalfDepth),
+                                                    new IfcCartesianPoint(-innerHalfWidth,
+                                                                          -innerHalfDepth),
+                                                    new IfcCartesianPoint(
+                                                            innerHalfWidth,
+                                                            -innerHalfDepth));
+            IfcArbitraryProfileDefWithVoids section =
+                    new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
+                                                        null,
+                                                        outerRect,
+                                                        innerRect);
+            IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(section,
+                                                                 new IfcAxis2Placement3D(
+                                                                         0,
+                                                                         0,
+                                                                         0),
+                                                                 extrusionDirection,
+                                                                 new IfcLengthMeasure(
+                                                                         neckLength));
+            endplateItems.add(neck);
+        }
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                endplateItems);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcLocalPlacement location = resolveLocation(obj);
+        if (obj.isSwitched()) {
+            location = flip(location, obj.getLength());
+        }
+        IfcProxy rectEndplate =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(location)
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(rectEndplate);
     }
 
     /**
@@ -1628,7 +1701,57 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularPlate obj) {
+        double halfWidth = obj.getWidth() / 2;
+        double halfDepth = obj.getDepth() / 2;
+        IfcPolyline outerRect =
+                new IfcPolyline(new IfcCartesianPoint(halfWidth, halfDepth),
+                                new IfcCartesianPoint(-halfWidth, halfDepth),
+                                new IfcCartesianPoint(-halfWidth, -halfDepth),
+                                new IfcCartesianPoint(halfWidth, -halfDepth));
+        double innerHalfWidth = obj.getHoleWidth() / 2;
+        double innerHalfDepth = obj.getHoleDepth() / 2;
+        IfcPolyline innerRect = new IfcPolyline(new IfcCartesianPoint(
+                innerHalfWidth,
+                innerHalfDepth),
+                                                new IfcCartesianPoint(-innerHalfWidth,
+                                                                      innerHalfDepth),
+                                                new IfcCartesianPoint(-innerHalfWidth,
+                                                                      -innerHalfDepth),
+                                                new IfcCartesianPoint(
+                                                        innerHalfWidth,
+                                                        -innerHalfDepth));
+        IfcArbitraryProfileDefWithVoids section =
+                new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
+                                                    null,
+                                                    outerRect,
+                                                    innerRect);
+        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(section,
+                                                              new IfcAxis2Placement3D(
+                                                                      0,
+                                                                      0,
+                                                                      0),
+                                                              new IfcDirection(0,
+                                                                               0,
+                                                                               1),
+                                                              new IfcLengthMeasure(
+                                                                      obj.getThickness()));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                plate);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy rectPlate =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(rectPlate);
     }
 
     /**
