@@ -938,7 +938,39 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Box obj) {
+        IfcRectangleProfileDef boxSection = new IfcRectangleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                new IfcAxis2Placement2D(0, 0),
+                new IfcPositiveLengthMeasure(obj.getWidth()),
+                new IfcPositiveLengthMeasure(obj.getDepth()));
+        IfcExtrudedAreaSolid box = new IfcExtrudedAreaSolid(boxSection,
+                                                            new IfcAxis2Placement3D(
+                                                                    0,
+                                                                    0,
+                                                                    0),
+                                                            new IfcDirection(0,
+                                                                             0,
+                                                                             1),
+                                                            new IfcLengthMeasure(
+                                                                    obj.getLength()));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                box);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy boxProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(boxProxy);
     }
 
     /**
@@ -950,7 +982,40 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Collar obj) {
+        IfcCircleHollowProfileDef collarSection = new IfcCircleHollowProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                new IfcAxis2Placement2D(0, 0),
+                new IfcPositiveLengthMeasure(obj.getRadius()),
+                new IfcPositiveLengthMeasure(obj.getThickness()));
+        IfcExtrudedAreaSolid collar = new IfcExtrudedAreaSolid(collarSection,
+                                                               new IfcAxis2Placement3D(
+                                                                       0,
+                                                                       0,
+                                                                       0),
+                                                               new IfcDirection(
+                                                                       0,
+                                                                       0,
+                                                                       1),
+                                                               new IfcLengthMeasure(
+                                                                       obj.getLength()));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                collar);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy collarProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(collarProxy);
     }
 
     /**
@@ -1367,7 +1432,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Ladder obj) {
-
+        resolveLocation(obj);
     }
 
     /**
@@ -2054,7 +2119,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Stair obj) {
-
+        resolveLocation(obj);
     }
 
     /**
@@ -2078,7 +2143,40 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull TankShell obj) {
+        IfcCircleHollowProfileDef shellSection = new IfcCircleHollowProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                new IfcAxis2Placement2D(0, 0),
+                new IfcPositiveLengthMeasure(obj.getRadius()),
+                new IfcPositiveLengthMeasure(obj.getThickness()));
+        IfcExtrudedAreaSolid tankShell = new IfcExtrudedAreaSolid(shellSection,
+                                                                  new IfcAxis2Placement3D(
+                                                                          0,
+                                                                          0,
+                                                                          0),
+                                                                  new IfcDirection(
+                                                                          0,
+                                                                          0,
+                                                                          1),
+                                                                  new IfcLengthMeasure(
+                                                                          obj.getHeight()));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                tankShell);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy tankShellProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(tankShellProxy);
     }
 
     /**
