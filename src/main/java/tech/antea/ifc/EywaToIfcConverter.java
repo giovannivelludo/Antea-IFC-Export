@@ -552,18 +552,18 @@ public class EywaToIfcConverter implements EywaConverter {
 
         // if flanged
         if (crownRadius != 0 && crownThickness != 0) {
-            IfcPolyline crownSection =
-                    new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                    new IfcCartesianPoint(crownRadius, 0),
-                                    new IfcCartesianPoint(crownRadius,
-                                                          crownThickness),
-                                    new IfcCartesianPoint(0, crownThickness));
-            IfcArbitraryClosedProfileDef crownSectionWrapper =
-                    new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                     null,
-                                                     crownSection);
+            IfcRectangleProfileDef revolvedRectangle =
+                    new IfcRectangleProfileDef(IfcProfileTypeEnum.AREA,
+                                               null,
+                                               new IfcAxis2Placement2D(
+                                                       crownRadius / 2,
+                                                       crownThickness / 2),
+                                               new IfcPositiveLengthMeasure(
+                                                       crownRadius),
+                                               new IfcPositiveLengthMeasure(
+                                                       crownThickness));
             IfcRevolvedAreaSolid crown = new IfcRevolvedAreaSolid(
-                    crownSectionWrapper,
+                    revolvedRectangle,
                     conePosition,
                     rotationAxis,
                     new IfcPlaneAngleMeasure(2 * PI));
@@ -728,7 +728,130 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Beam obj) {
+        IfcProfileDef beamSection;
+        switch (obj.getKind()) {
+            case IPE:
+            case INP:
+            case HEA:
+            case HEB:
+                beamSection = IfcIShapeProfileDef.builder()
+                        .profileType(IfcProfileTypeEnum.AREA)
+                        .position(new IfcAxis2Placement2D(0, 0))
+                        .overallWidth(new IfcPositiveLengthMeasure(obj.getWidth()))
+                        .overallDepth(new IfcPositiveLengthMeasure(obj.getDepth()))
+                        .webThickness(new IfcPositiveLengthMeasure(obj.getCoreThickness()))
+                        .flangeThickness(new IfcPositiveLengthMeasure(obj.getSideThickness()))
+                        .build();
+                break;
+            case UNP:
+                beamSection = IfcUShapeProfileDef.builder()
+                        .profileType(IfcProfileTypeEnum.AREA)
+                        .position(new IfcAxis2Placement2D(0, 0))
+                        .depth(new IfcPositiveLengthMeasure(obj.getDepth()))
+                        .flangeWidth(new IfcPositiveLengthMeasure(obj.getWidth()))
+                        .webThickness(new IfcPositiveLengthMeasure(obj.getCoreThickness()))
+                        .flangeThickness(new IfcPositiveLengthMeasure(obj.getSideThickness()))
+                        .build();
+                break;
+            case T:
+                beamSection = IfcTShapeProfileDef.builder()
+                        .profileType(IfcProfileTypeEnum.AREA)
+                        .position(new IfcAxis2Placement2D(0, 0))
+                        .depth(new IfcPositiveLengthMeasure(obj.getDepth()))
+                        .flangeWidth(new IfcPositiveLengthMeasure(obj.getWidth()))
+                        .webThickness(new IfcPositiveLengthMeasure(obj.getCoreThickness()))
+                        .flangeThickness(new IfcPositiveLengthMeasure(obj.getSideThickness()))
+                        .build();
+                break;
+            case L:
+                if (obj.getCoreThickness().equals(obj.getSideThickness())) {
+                    IfcLShapeProfileDef.IfcLShapeProfileDefBuilder builder =
+                            IfcLShapeProfileDef.builder()
+                                    .profileType(IfcProfileTypeEnum.AREA)
+                                    .position(new IfcAxis2Placement2D(0, 0))
+                                    .depth(new IfcPositiveLengthMeasure(obj.getDepth()))
+                                    .thickness(new IfcPositiveLengthMeasure(obj.getCoreThickness()));
+                    if (!obj.getDepth().equals(obj.getWidth())) {
+                        builder.width(new IfcPositiveLengthMeasure(obj.getWidth()));
+                    }
+                    beamSection = builder.build();
+                } else {
+                    double halfWidth = obj.getWidth() / 2;
+                    double halfDepth = obj.getDepth() / 2;
+                    double halfInternalWidth =
+                            halfWidth - obj.getCoreThickness();
+                    double halfInternalDepth =
+                            halfDepth - obj.getSideThickness();
+                    IfcPolyline polyline =
+                            new IfcPolyline(new IfcCartesianPoint(-halfWidth,
+                                                                  halfDepth),
+                                            new IfcCartesianPoint(-halfWidth,
+                                                                  -halfDepth),
+                                            new IfcCartesianPoint(halfWidth,
+                                                                  -halfDepth),
+                                            new IfcCartesianPoint(halfWidth,
+                                                                  -halfInternalDepth),
+                                            new IfcCartesianPoint(-halfInternalWidth,
+                                                                  -halfInternalDepth),
+                                            new IfcCartesianPoint(-halfInternalWidth,
+                                                                  halfDepth));
+                    beamSection = new IfcArbitraryClosedProfileDef(
+                            IfcProfileTypeEnum.AREA,
+                            null,
+                            polyline);
+                }
+                break;
+            case CONCRETE:
+            case RECTANGULAR:
+                beamSection =
+                        new IfcRectangleProfileDef(IfcProfileTypeEnum.AREA,
+                                                   null,
+                                                   new IfcAxis2Placement2D(0,
+                                                                           0),
+                                                   new IfcPositiveLengthMeasure(
+                                                           obj.getWidth()),
+                                                   new IfcPositiveLengthMeasure(
+                                                           obj.getDepth()));
+                break;
+            case PIPE:
+                beamSection = new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
+                                                      null,
+                                                      new IfcAxis2Placement2D(0,
+                                                                              0),
+                                                      new IfcPositiveLengthMeasure(
+                                                              obj.getRadius()));
+                break;
+            default:
+                beamSection = null;
+        }
 
+        IfcExtrudedAreaSolid beam = new IfcExtrudedAreaSolid(beamSection,
+                                                             new IfcAxis2Placement3D(
+                                                                     0,
+                                                                     0,
+                                                                     0),
+                                                             new IfcDirection(0,
+                                                                              0,
+                                                                              1),
+                                                             new IfcLengthMeasure(
+                                                                     obj.getLength()));
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                beam);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy beamProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(beamProxy);
     }
 
     /**
@@ -895,7 +1018,38 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Dielectric obj) {
+        double thickness = obj.getRadius() / 10;
+        IfcCircleHollowProfileDef dielectricSection =
+                new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
+                                              null,
+                                              new IfcAxis2Placement2D(0, 0),
+                                              new IfcPositiveLengthMeasure(
+                                                      obj.getRadius() +
+                                                              thickness),
+                                              new IfcPositiveLengthMeasure(
+                                                      thickness));
+        IfcExtrudedAreaSolid dielectric = new IfcExtrudedAreaSolid(
+                dielectricSection,
+                new IfcAxis2Placement3D(0, 0, -obj.getLength()),
+                new IfcDirection(0, 0, 1),
+                new IfcLengthMeasure(obj.getLength() * 3));
 
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                dielectric);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy dielectricProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(dielectricProxy);
     }
 
     /**
@@ -1448,44 +1602,37 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(@NonNull RectangularBlind obj) {
         IfcAxis2Placement3D origin = new IfcAxis2Placement3D(0, 0, 0);
-        double halfWidth = obj.getWidth() / 2;
-        double halfDepth = obj.getDepth() / 2;
-        IfcPolyline blindSection =
-                new IfcPolyline(new IfcCartesianPoint(halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, -halfDepth),
-                                new IfcCartesianPoint(halfWidth, -halfDepth));
-        IfcArbitraryClosedProfileDef blindSectionWrapper =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 blindSection);
-        IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(
-                blindSectionWrapper,
-                origin,
-                new IfcDirection(0, 0, 1),
-                new IfcLengthMeasure(obj.getThickness()));
+        IfcAxis2Placement2D centre = new IfcAxis2Placement2D(0, 0);
+        IfcRectangleProfileDef blindSection = new IfcRectangleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                centre,
+                new IfcPositiveLengthMeasure(obj.getWidth()),
+                new IfcPositiveLengthMeasure(obj.getDepth()));
+        IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindSection,
+                                                              origin,
+                                                              new IfcDirection(0,
+                                                                               0,
+                                                                               1),
+                                                              new IfcLengthMeasure(
+                                                                      obj.getThickness()));
 
-        double plateHalfWidth = halfWidth - obj.getCrownWidth();
-        double plateHalfDepth = halfDepth - obj.getCrownDepth();
-        IfcPolyline plateSection = new IfcPolyline(new IfcCartesianPoint(
-                plateHalfWidth,
-                plateHalfDepth),
-                                                   new IfcCartesianPoint(-plateHalfWidth,
-                                                                         plateHalfDepth),
-                                                   new IfcCartesianPoint(-plateHalfWidth,
-                                                                         -plateHalfDepth),
-                                                   new IfcCartesianPoint(
-                                                           plateHalfWidth,
-                                                           -plateHalfDepth));
-        IfcArbitraryClosedProfileDef plateSectionWrapper =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 plateSection);
-        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(
-                plateSectionWrapper,
-                origin,
-                new IfcDirection(0, 0, -1),
-                new IfcLengthMeasure(obj.getThickness() / 10));
+        IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                centre,
+                new IfcPositiveLengthMeasure(
+                        obj.getWidth() - (obj.getCrownWidth() * 2)),
+                new IfcPositiveLengthMeasure(
+                        obj.getDepth() - (obj.getCrownDepth() * 2)));
+        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
+                                                              origin,
+                                                              new IfcDirection(0,
+                                                                               0,
+                                                                               -1),
+                                                              new IfcLengthMeasure(
+                                                                      obj.getThickness() /
+                                                                              10));
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -1520,22 +1667,18 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularEndplate obj) {
+        IfcAxis2Placement2D centre = new IfcAxis2Placement2D(0, 0);
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
         double neckLength = obj.getLength() - obj.getEndThickness();
         Set<IfcRepresentationItem> endplateItems =
                 new HashSet<>(neckLength == 0 ? 1 : 2, 1);
 
-        double halfWidth = obj.getWidth() / 2;
-        double halfDepth = obj.getDepth() / 2;
-        IfcPolyline outerRect =
-                new IfcPolyline(new IfcCartesianPoint(halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, -halfDepth),
-                                new IfcCartesianPoint(halfWidth, -halfDepth));
-        IfcArbitraryClosedProfileDef plateSection =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 outerRect);
+        IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                centre,
+                new IfcPositiveLengthMeasure(obj.getWidth()),
+                new IfcPositiveLengthMeasure(obj.getDepth()));
         IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
                                                               new IfcAxis2Placement3D(
                                                                       0,
@@ -1547,24 +1690,15 @@ public class EywaToIfcConverter implements EywaConverter {
         endplateItems.add(plate);
 
         if (neckLength != 0) {
-            double innerHalfWidth = halfWidth - obj.getThickness();
-            double innerHalfDepth = halfDepth - obj.getThickness();
-            IfcPolyline innerRect = new IfcPolyline(new IfcCartesianPoint(
-                    innerHalfWidth,
-                    innerHalfDepth),
-                                                    new IfcCartesianPoint(-innerHalfWidth,
-                                                                          innerHalfDepth),
-                                                    new IfcCartesianPoint(-innerHalfWidth,
-                                                                          -innerHalfDepth),
-                                                    new IfcCartesianPoint(
-                                                            innerHalfWidth,
-                                                            -innerHalfDepth));
-            IfcArbitraryProfileDefWithVoids section =
-                    new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
-                                                        null,
-                                                        outerRect,
-                                                        innerRect);
-            IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(section,
+            IfcRectangleHollowProfileDef neckSection =
+                    IfcRectangleHollowProfileDef.builder()
+                            .profileType(IfcProfileTypeEnum.AREA)
+                            .position(centre)
+                            .xDim(new IfcPositiveLengthMeasure(obj.getWidth()))
+                            .yDim(new IfcPositiveLengthMeasure(obj.getDepth()))
+                            .wallThickness(new IfcPositiveLengthMeasure(obj.getThickness()))
+                            .build();
+            IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(neckSection,
                                                                  new IfcAxis2Placement3D(
                                                                          0,
                                                                          0,
@@ -1608,35 +1742,14 @@ public class EywaToIfcConverter implements EywaConverter {
     public void addObject(@NonNull RectangularFlange obj) {
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
-        double halfNeckWidth = obj.getWidth() / 2;
-        double halfNeckDepth = obj.getDepth() / 2;
-        IfcPolyline outerNeckSection = new IfcPolyline(new IfcCartesianPoint(
-                halfNeckWidth,
-                halfNeckDepth),
-                                                       new IfcCartesianPoint(-halfNeckWidth,
-                                                                             halfNeckDepth),
-                                                       new IfcCartesianPoint(-halfNeckWidth,
-                                                                             -halfNeckDepth),
-                                                       new IfcCartesianPoint(
-                                                               halfNeckWidth,
-                                                               -halfNeckDepth));
-        double halfInnerNeckWidth = halfNeckWidth - obj.getThickness();
-        double halfInnerNeckDepth = halfNeckDepth - obj.getThickness();
-        IfcPolyline innerNeckSection = new IfcPolyline(new IfcCartesianPoint(
-                halfInnerNeckWidth,
-                halfInnerNeckDepth),
-                                                       new IfcCartesianPoint(-halfInnerNeckWidth,
-                                                                             halfInnerNeckDepth),
-                                                       new IfcCartesianPoint(-halfInnerNeckWidth,
-                                                                             -halfInnerNeckDepth),
-                                                       new IfcCartesianPoint(
-                                                               halfInnerNeckWidth,
-                                                               -halfInnerNeckDepth));
-        IfcArbitraryProfileDefWithVoids neckSection =
-                new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
-                                                    null,
-                                                    outerNeckSection,
-                                                    innerNeckSection);
+        IfcRectangleHollowProfileDef neckSection =
+                IfcRectangleHollowProfileDef.builder()
+                        .profileType(IfcProfileTypeEnum.AREA)
+                        .position(new IfcAxis2Placement2D(0, 0))
+                        .xDim(new IfcPositiveLengthMeasure(obj.getWidth()))
+                        .yDim(new IfcPositiveLengthMeasure(obj.getDepth()))
+                        .wallThickness(new IfcPositiveLengthMeasure(obj.getThickness()))
+                        .build();
         IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(neckSection,
                                                              new IfcAxis2Placement3D(
                                                                      0,
@@ -1646,19 +1759,30 @@ public class EywaToIfcConverter implements EywaConverter {
                                                              new IfcLengthMeasure(
                                                                      obj.getNeck()));
 
-
-        double halfCrownWidth = halfInnerNeckWidth + obj.getCrownWidth();
-        double halfCrownDepth = halfInnerNeckDepth + obj.getCrownDepth();
+        double halfInnerCrownWidth = obj.getWidth() / 2 - obj.getThickness();
+        double halfInnerCrownDepth = obj.getDepth() / 2 - obj.getThickness();
+        IfcPolyline innerNeckSection = new IfcPolyline(new IfcCartesianPoint(
+                halfInnerCrownWidth,
+                halfInnerCrownDepth),
+                                                       new IfcCartesianPoint(-halfInnerCrownWidth,
+                                                                             halfInnerCrownDepth),
+                                                       new IfcCartesianPoint(-halfInnerCrownWidth,
+                                                                             -halfInnerCrownDepth),
+                                                       new IfcCartesianPoint(
+                                                               halfInnerCrownWidth,
+                                                               -halfInnerCrownDepth));
+        double halfOuterCrownWidth = halfInnerCrownWidth + obj.getCrownWidth();
+        double halfOuterCrownDepth = halfInnerCrownDepth + obj.getCrownDepth();
         IfcPolyline outerCrownSection = new IfcPolyline(new IfcCartesianPoint(
-                halfCrownWidth,
-                halfCrownDepth),
-                                                        new IfcCartesianPoint(-halfCrownWidth,
-                                                                              halfCrownDepth),
-                                                        new IfcCartesianPoint(-halfCrownWidth,
-                                                                              -halfCrownDepth),
+                halfOuterCrownWidth,
+                halfOuterCrownDepth),
+                                                        new IfcCartesianPoint(-halfOuterCrownWidth,
+                                                                              halfOuterCrownDepth),
+                                                        new IfcCartesianPoint(-halfOuterCrownWidth,
+                                                                              -halfOuterCrownDepth),
                                                         new IfcCartesianPoint(
-                                                                halfCrownWidth,
-                                                                -halfCrownDepth));
+                                                                halfOuterCrownWidth,
+                                                                -halfOuterCrownDepth));
         IfcArbitraryProfileDefWithVoids crownSection =
                 new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
                                                     null,
@@ -1763,30 +1887,14 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularShell obj) {
-        double halfWidth = obj.getWidth() / 2;
-        double halfDepth = obj.getDepth() / 2;
-        IfcPolyline outerRect =
-                new IfcPolyline(new IfcCartesianPoint(halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, halfDepth),
-                                new IfcCartesianPoint(-halfWidth, -halfDepth),
-                                new IfcCartesianPoint(halfWidth, -halfDepth));
-        double innerHalfWidth = halfWidth - obj.getThickness();
-        double innerHalfDepth = halfDepth - obj.getThickness();
-        IfcPolyline innerRect = new IfcPolyline(new IfcCartesianPoint(
-                innerHalfWidth,
-                innerHalfDepth),
-                                                new IfcCartesianPoint(-innerHalfWidth,
-                                                                      innerHalfDepth),
-                                                new IfcCartesianPoint(-innerHalfWidth,
-                                                                      -innerHalfDepth),
-                                                new IfcCartesianPoint(
-                                                        innerHalfWidth,
-                                                        -innerHalfDepth));
-        IfcArbitraryProfileDefWithVoids section =
-                new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum.AREA,
-                                                    null,
-                                                    outerRect,
-                                                    innerRect);
+        IfcRectangleHollowProfileDef section =
+                IfcRectangleHollowProfileDef.builder()
+                        .profileType(IfcProfileTypeEnum.AREA)
+                        .position(new IfcAxis2Placement2D(0, 0))
+                        .xDim(new IfcPositiveLengthMeasure(obj.getWidth()))
+                        .yDim(new IfcPositiveLengthMeasure(obj.getDepth()))
+                        .wallThickness(new IfcPositiveLengthMeasure(obj.getThickness()))
+                        .build();
         IfcExtrudedAreaSolid rectShell = new IfcExtrudedAreaSolid(section,
                                                                   new IfcAxis2Placement3D(
                                                                           0,
