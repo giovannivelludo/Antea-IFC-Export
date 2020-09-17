@@ -47,6 +47,7 @@ import static java.lang.Math.*;
 
 public class EywaToIfcConverter implements EywaConverter {
 
+    private static final boolean USE_ABSOLUTE_POSITIONS = false;
     private static final String COMPANY_NAME = "Antea";
     private static final String PROGRAM_NAME = "Antea IFC Export";
     private static final String PROGRAM_VERSION = "0.0.1-SNAPSHOT";
@@ -79,10 +80,9 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     private final Set<IfcProduct> geometries = new HashSet<>();
     /**
-     * Maps each Primitive in the Eywa tree to its position relative to the
-     * world coordinate system.
+     * Maps each Primitive in the Eywa tree to its placement.
      */
-    private final Map<Primitive, IfcAxis2Placement3D> objPositions =
+    private final Map<Primitive, IfcLocalPlacement> objPositions =
             new HashMap<>();
     private Map<String, Object> hints;
 
@@ -307,8 +307,10 @@ public class EywaToIfcConverter implements EywaConverter {
      *                  (which corresponds to the y axis in the Eywa
      *                  specification).
      * @return The placement of the flipped object.
+     *
+     * @throws NullPointerException If unflipped is null.
      */
-    private static IfcLocalPlacement flip(IfcLocalPlacement unflipped,
+    private static IfcLocalPlacement flip(@NonNull IfcLocalPlacement unflipped,
                                           double length) {
         IfcAxis2Placement3D localCoordSys =
                 (IfcAxis2Placement3D) unflipped.getRelativePlacement();
@@ -577,6 +579,59 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * Rotates the given vector.
+     *
+     * @param vector    The vector to rotate.
+     * @param rotations Euler angles in radians describing the 3 rotations.
+     * @param order     Indicates on what axis each rotation must be applied,
+     *                  for example {@code "XYZ"} indicates that the first
+     *                  rotation should be done around the X axis, the second
+     *                  one on the Y axis, and the third one on the Z axis.
+     * @throws NullPointerException     If any of the arguments are null.
+     * @throws IllegalArgumentException If any of the arguments have length !=
+     *                                  3, if order contains any characters
+     *                                  other than 'X', 'Y' and 'Z'.
+     */
+    private static void rotate(@NonNull double[] vector,
+                               @NonNull double[] rotations,
+                               @NonNull String order) {
+        if (vector.length != 3 || rotations.length != 3 ||
+                order.length() != 3) {
+            throw new IllegalArgumentException(
+                    "length of all arguments must be 3");
+        }
+        if (!order.matches("[XYZ]{3}")) {
+            throw new IllegalArgumentException(
+                    "order can contain only the characters 'X', 'Y' and 'Z'");
+        }
+        double[] oldVector = new double[3];
+        for (byte i = 0; i < order.length(); i++) {
+            double ang = rotations[i];
+            System.arraycopy(vector, 0, oldVector, 0, vector.length);
+            switch (order.charAt(i)) {
+                case 'X':
+                    vector[1] =
+                            oldVector[1] * cos(ang) - oldVector[2] * sin(ang);
+                    vector[2] =
+                            oldVector[1] * sin(ang) + oldVector[2] * cos(ang);
+                    break;
+                case 'Y':
+                    vector[0] =
+                            oldVector[0] * cos(ang) + oldVector[2] * sin(ang);
+                    vector[2] =
+                            -oldVector[0] * sin(ang) + oldVector[2] * cos(ang);
+                    break;
+                default: // Z
+                    vector[0] =
+                            oldVector[0] * cos(ang) - oldVector[1] * sin(ang);
+                    vector[1] =
+                            oldVector[0] * sin(ang) + oldVector[1] * cos(ang);
+                    break;
+            }
+        }
+    }
+
+    /**
      * @return The result of the conversion.
      */
     @Override
@@ -648,13 +703,20 @@ public class EywaToIfcConverter implements EywaConverter {
      *                                  not set and the rotation field is.
      */
     private IfcLocalPlacement resolveLocation(@NonNull Primitive obj) {
-        IfcAxis2Placement3D objPosition;
-        IfcAxis2Placement3D parentPosition = objPositions.get(obj.getParent());
-        if (parentPosition == null) {
-            // obj is the root object
+        IfcAxis2Placement3D parentPosition;
+        if (USE_ABSOLUTE_POSITIONS) {
+            parentPosition =
+                    (IfcAxis2Placement3D) objPositions.get(obj.getParent())
+                            .getRelativePlacement();
+            if (parentPosition == null) {
+                // obj is the root object
+                parentPosition = new IfcAxis2Placement3D(0, 0, 0);
+            }
+        } else {
             parentPosition = new IfcAxis2Placement3D(0, 0, 0);
         }
 
+        IfcAxis2Placement3D objPosition;
         if (obj.getMatrix() != null) {
             Double[] matrix = obj.getMatrix();
             double[] location = new double[4];
@@ -677,46 +739,61 @@ public class EywaToIfcConverter implements EywaConverter {
 
             double[] newLocation = new double[3];
             double[] newAxis = new double[3];
-            double[] newRefDirection = new double[3];
+            double[] newRefDir = new double[3];
             System.arraycopy(multiply(matrix, location), 0, newLocation, 0, 3);
             System.arraycopy(multiply(matrix, axis), 0, newAxis, 0, 3);
-            System.arraycopy(multiply(matrix, refDir),
-                             0,
-                             newRefDirection,
-                             0,
-                             3);
+            System.arraycopy(multiply(matrix, refDir), 0, newRefDir, 0, 3);
             objPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
                                             new IfcDirection(newAxis),
-                                            new IfcDirection(newRefDirection));
-        } else if (obj.getRotationArray() != null &&
-                !(Arrays.equals(obj.getRotationArray(),
-                                new Double[]{0d, 0d, 0d}) ||
-                        Arrays.equals(obj.getRotationArray(),
-                                      new Double[]{-0d, -0d, -0d}))) {
-            throw new IllegalArgumentException(
-                    "conversion of objects with both position and " +
-                            "rotation set is currently not supported");
+                                            new IfcDirection(newRefDir));
+        } else if (obj.getPosition() == null && obj.getRotation() == null) {
+            objPosition = new IfcAxis2Placement3D(0, 0, 0);
         } else {
-            Double[] position = obj.getPosition();
-            if (position == null) {
-                position = new Double[]{0d, 0d, 0d};
+            // using position and rotation
+            double[] location = new double[3];
+            double[] axis = new double[3];
+            double[] refDir = new double[3];
+            List<IfcLengthMeasure> locationCoordinates =
+                    parentPosition.getLocation().getCoordinates();
+            List<IfcReal> axisCoordinates =
+                    parentPosition.getP().get(2).getDirectionRatios(); // z axis
+            List<IfcReal> refDirectionCoordinates =
+                    parentPosition.getP().get(0).getDirectionRatios(); // x axis
+            for (int i = 0; i < locationCoordinates.size(); i++) {
+                location[i] = locationCoordinates.get(i).getValue();
+                axis[i] = axisCoordinates.get(i).getValue();
+                refDir[i] = refDirectionCoordinates.get(i).getValue();
             }
 
-            double[] location =
-                    parentPosition.getLocation().getCoordinates().stream()
-                            .mapToDouble(IfcLengthMeasure::getValue).toArray();
-            double[] newLocation = new double[]{location[0] + position[0],
-                                                location[1] + position[1],
-                                                location[2] + position[2]};
+            Double[] position =
+                    obj.getPosition() == null ? new Double[]{0d, 0d, 0d} :
+                            obj.getPosition();
+            double[] rotationAngles =
+                    obj.getRotationArray() == null ? new double[]{0, 0, 0} :
+                            Arrays.stream(obj.getRotationArray())
+                                    .mapToDouble(Double::doubleValue).toArray();
+            String rotationAxis = obj.getRotationAxis() == null ||
+                    obj.getRotationAxis().equals("") ? "XYZ" :
+                    obj.getRotationAxis();
+
+            location[0] = location[0] + position[0];
+            location[1] = location[1] + position[1];
+            location[2] = location[2] + position[2];
+            rotate(axis, rotationAngles, rotationAxis);
+            rotate(refDir, rotationAngles, rotationAxis);
 
             objPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
-                                            parentPosition.getAxis(),
-                                            parentPosition.getRefDirection());
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(location),
+                                            new IfcDirection(axis),
+                                            new IfcDirection(refDir));
         }
-        objPositions.put(obj, objPosition);
-        return new IfcLocalPlacement(null, objPosition);
+        IfcLocalPlacement objPlacement = USE_ABSOLUTE_POSITIONS ?
+                new IfcLocalPlacement(null, objPosition) :
+                new IfcLocalPlacement(objPositions.get(obj.getParent()),
+                                      objPosition);
+        objPositions.put(obj, objPlacement);
+        return objPlacement;
     }
 
     /**
