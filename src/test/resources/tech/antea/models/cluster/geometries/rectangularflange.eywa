@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": "89310044284608512",
+    "placeId": "89310042871128064",
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotation": [
+      3.14,
+      0,
+      0
+    ],
+    "children": [
+      {
+        "type": "RectangularFlange",
+        "thickness": 15.0,
+        "lining": 0.0,
+        "matrix": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          990.0,
+          1850.0,
+          0.0,
+          1.0
+        ],
+        "width": 950.0,
+        "depth": 500.0,
+        "length": 15.0,
+        "crownWidth": 50.0,
+        "crownDepth": 50.0,
+        "crownThickness": 15.0,
+        "size": 950.0,
+        "id": "140617",
+        "imId": 70278,
+        "placeId": "444",
+        "bboxId": "163891",
+        "name": "Flangia"
+      }
+    ],
+    "bboxId": "89310044284608512"
+  }
+}

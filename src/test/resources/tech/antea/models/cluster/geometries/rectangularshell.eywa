@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": 17644,
+    "placeId": 401,
+    "children": [
+      {
+        "type": "RectangularShell",
+        "id": 17646,
+        "placeId": 401,
+        "thickness": 1.0,
+        "lining": 0.0,
+        "matrix": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          168303.0,
+          35277.0,
+          22658.04,
+          1.0
+        ],
+        "width": 258.0,
+        "depth": 2776.0,
+        "length": 100.0,
+        "size": 2776.0,
+        "imId": 1138604320,
+        "bboxId": 44140,
+        "name": "CASSA COLLETTORE MOBILE"
+      }
+    ],
+    "bboxId": "410"
+  }
+}

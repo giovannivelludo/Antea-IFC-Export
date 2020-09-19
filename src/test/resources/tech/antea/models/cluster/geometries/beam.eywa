@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": "47701",
+    "imId": 9744,
+    "placeId": "437",
+    "bboxId": "442",
+    "children": [
+      {
+        "type": "Beam",
+        "kind": "IPE",
+        "width": 2,
+        "depth": 3,
+        "height": 10,
+        "sideThickness": 0.4,
+        "coreThickness": 0.6,
+        "id": "110334",
+        "imId": 1110684724,
+        "placeId": "8457",
+        "bboxId": "134461",
+        "name": "BEAM"
+      }
+    ]
+  }
+}

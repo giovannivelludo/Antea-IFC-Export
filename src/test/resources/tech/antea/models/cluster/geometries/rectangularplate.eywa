@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": 17644,
+    "placeId": 401,
+    "children": [
+      {
+        "type": "RectangularPlate",
+        "id": 17645,
+        "placeId": 401,
+        "thickness": 40.0,
+        "lining": 0.0,
+        "matrix": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          168263.0,
+          35277.0,
+          22658.04,
+          1.0
+        ],
+        "width": 298.0,
+        "depth": 2826.0,
+        "holeWidth": 40.0,
+        "holeDepth": 0.0,
+        "size": 2826.0,
+        "imId": 1138604319,
+        "bboxId": 44139,
+        "name": "DIETRO MOBILE"
+      }
+    ],
+    "bboxId": "410"
+  }
+}

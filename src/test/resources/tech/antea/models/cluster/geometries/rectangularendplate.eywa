@@ -1,0 +1,54 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": "47701",
+    "imId": 9744,
+    "placeId": "437",
+    "bboxId": "442",
+    "children": [
+      {
+        "type": "RectangularEndplate",
+        "thickness": 22.0,
+        "lining": 0.0,
+        "matrix": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 370.0,
+        "depth": 3056.0,
+        "endThickness": 22.0,
+        "switched": true,
+        "size": 3056.0,
+        "id": "47702",
+        "imId": 84164,
+        "placeId": "437",
+        "bboxId": "73469",
+        "name": "Fondo 2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": "89310044284608512",
+    "placeId": "89310042871128064",
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotation": [
+      3.14,
+      0,
+      0
+    ],
+    "children": [
+      {
+        "type": "RectangularBlind",
+        "thickness": 20.0,
+        "lining": 0.0,
+        "matrix": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 500.0,
+        "depth": 3000.0,
+        "crownWidth": 500.0,
+        "crownDepth": 3000.0,
+        "switched": false,
+        "size": 3000.0,
+        "id": "70928",
+        "imId": 84112,
+        "placeId": "421",
+        "bboxId": "96111",
+        "name": "Cieca"
+      }
+    ],
+    "bboxId": "89310044284608512"
+  }
+}

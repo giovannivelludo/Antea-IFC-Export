@@ -1,0 +1,57 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 0,
+    "geometries": 2,
+    "projection": "isometric",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "id": "47701",
+    "imId": 9744,
+    "placeId": "437",
+    "bboxId": "442",
+    "children": [
+      {
+        "type": "FourWaysValve",
+        "radius1": 2,
+        "length1": 7,
+        "crownRadius1": 3,
+        "crownThickness1": 2,
+        "radius2": 1.5,
+        "length2": 6,
+        "crownRadius2": 2.5,
+        "crownThickness2": 0.5,
+        "radius3": 2,
+        "length3": 7,
+        "crownRadius3": 3,
+        "crownThickness3": 2,
+        "radius4": 1.5,
+        "length4": 6,
+        "crownRadius4": 2.5,
+        "crownThickness4": 0.5,
+        "thickness": 0.1,
+        "lining": 0.1,
+        "position": [
+          0,
+          4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "id": "110334",
+        "imId": 1110684724,
+        "placeId": "8457",
+        "bboxId": "134461",
+        "name": "FOUR"
+      }
+    ]
+  }
+}
