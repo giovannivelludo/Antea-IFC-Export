@@ -47,7 +47,18 @@ import static java.lang.Math.*;
 
 public class EywaToIfcConverter implements EywaConverter {
 
+    /**
+     * If {@code true}, the position of the converted objects will be relative
+     * to the world coordinate system, otherwise it will be relative to the
+     * position of the IfcProduct representing their parent in the Eywa tree.
+     */
     private static final boolean USE_ABSOLUTE_POSITIONS = false;
+    /**
+     * Number of points used to draw circles in
+     * {@link #addObject(EccentricCone)}.
+     */
+    private static final int CIRCLE_POINTS = 32;
+
     private static final String COMPANY_NAME = "Antea";
     private static final String PROGRAM_NAME = "Antea IFC Export";
     private static final String PROGRAM_VERSION = "0.0.1-SNAPSHOT";
@@ -57,19 +68,15 @@ public class EywaToIfcConverter implements EywaConverter {
      * Representation context for all geometries.
      */
     private static final IfcGeometricRepresentationContext
-            GEOMETRIC_REPRESENTATION_CONTEXT;
-
-    static {
-        IfcAxis2Placement3D worldCoordinateSystem =
-                new IfcAxis2Placement3D(0, 0, 0);
-        GEOMETRIC_REPRESENTATION_CONTEXT =
-                new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
-                                                      new IfcLabel("Model"),
-                                                      new IfcDimensionCount(3),
-                                                      new IfcReal(1.E-08),
-                                                      worldCoordinateSystem,
-                                                      null);
-    }
+            GEOMETRIC_REPRESENTATION_CONTEXT =
+            new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
+                                                  new IfcLabel("Model"),
+                                                  new IfcDimensionCount(3),
+                                                  new IfcReal(1.E-08),
+                                                  new IfcAxis2Placement3D(0,
+                                                                          0,
+                                                                          0),
+                                                  null);
 
     /**
      * Owner history for all {@link IfcRoot} objects in this project.
@@ -406,6 +413,65 @@ public class EywaToIfcConverter implements EywaConverter {
     private static double getSafeThickness(Primitive p) {
         return p == null || p.getThickness() == null || p.getThickness() <= 0 ?
                 0.1 : p.getThickness();
+    }
+
+    /**
+     * @param angles  The array containing the angles (in radians) at which
+     *                points composing the two circles should be drawn.
+     * @param radius1 The radius of the bottom circle.
+     * @param radius2 The radius of the top circle.
+     * @param length  The length of the eccentric cone.
+     * @return An IfcFacetedBrep representing an eccentric cone (without any
+     * internal voids).
+     *
+     * @throws NullPointerException     If {@code angles} is {@code null}.
+     * @throws IllegalArgumentException If {@code angles} contains less than 3
+     *                                  elements.
+     */
+    private static IfcFacetedBrep buildEccentricCone(@NonNull double[] angles,
+                                                     double radius1,
+                                                     double radius2,
+                                                     double length) {
+        if (angles.length < 3) {
+            throw new IllegalArgumentException(
+                    "angles must contain at least 3 elements");
+        }
+        IfcCartesianPoint[] outerBottomCircle = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(cos(angle) * radius1,
+                                                         sin(angle) * radius1,
+                                                         0))
+                .toArray(IfcCartesianPoint[]::new);
+        double radiusDifference = radius1 - radius2;
+        IfcCartesianPoint[] outerTopCircle = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(cos(angle) * radius2,
+                                                         sin(angle) * radius2 +
+                                                                 radiusDifference,
+                                                         length))
+                .toArray(IfcCartesianPoint[]::new);
+
+        Set<IfcFace> faces = new HashSet<>(2 + angles.length, 1);
+        IfcPolyLoop bottomBase = new IfcPolyLoop(outerBottomCircle);
+        IfcPolyLoop topBase = new IfcPolyLoop(outerTopCircle);
+        faces.add(new IfcFace(new IfcFaceBound(bottomBase, IfcBoolean.T)));
+        faces.add(new IfcFace(new IfcFaceBound(topBase, IfcBoolean.T)));
+
+        // adding side faces of the cone
+        IntStream.range(0, outerBottomCircle.length - 1)
+                .mapToObj(i -> new IfcPolyLoop(outerBottomCircle[i],
+                                               outerBottomCircle[i + 1],
+                                               outerTopCircle[i + 1],
+                                               outerTopCircle[i]))
+                .map(polygon -> new IfcFace(new IfcFaceBound(polygon,
+                                                             IfcBoolean.T)))
+                .forEach(faces::add);
+        // last face
+        int lastPoint = outerBottomCircle.length - 1;
+        IfcPolyLoop lastFace = new IfcPolyLoop(outerBottomCircle[lastPoint],
+                                               outerTopCircle[lastPoint],
+                                               outerTopCircle[0],
+                                               outerBottomCircle[0]);
+        faces.add(new IfcFace(new IfcFaceBound(lastFace, IfcBoolean.T)));
+        return new IfcFacetedBrep(new IfcClosedShell(faces));
     }
 
     /**
@@ -1007,12 +1073,43 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull EccentricCone obj) {
-        resolveLocation(obj);
-        // FIXME: use an IfcManifoldSolidBrep, this means the shape
-        //  of the eccentric cone will be approximated using polygons.
-        new IllegalArgumentException(
-                "conversion of EccentricCones is currently not supported")
-                .printStackTrace();
+        double slice = 2 * PI / CIRCLE_POINTS;
+        // angles at which the points composing the circle will be drawn
+        double[] angles =
+                IntStream.range(0, CIRCLE_POINTS).mapToDouble(i -> i * slice)
+                        .toArray();
+
+        IfcFacetedBrep outerCone = buildEccentricCone(angles,
+                                                      obj.getRadius1(),
+                                                      obj.getRadius2(),
+                                                      obj.getLength());
+        double innerRadius1 = obj.getRadius1() - getSafeThickness(obj);
+        double innerRadius2 = obj.getRadius2() - getSafeThickness(obj);
+        IfcFacetedBrep innerCone = buildEccentricCone(angles,
+                                                      innerRadius1,
+                                                      innerRadius2,
+                                                      obj.getLength());
+        IfcBooleanResult eccentricCone =
+                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
+                                     outerCone,
+                                     innerCone);
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("CSG"),
+                eccentricCone);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy eccentricConeProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(eccentricConeProxy);
     }
 
     /**
@@ -1143,7 +1240,7 @@ public class EywaToIfcConverter implements EywaConverter {
             IfcPlane cuttingPlane =
                     new IfcPlane(new IfcAxis2Placement3D(0, 0, obj.getNeck()));
             IfcHalfSpaceSolid halfSpace =
-                    new IfcHalfSpaceSolid(cuttingPlane, true);
+                    new IfcHalfSpaceSolid(cuttingPlane, IfcBoolean.T);
             IfcBooleanClippingResult halfEllipsoid =
                     new IfcBooleanClippingResult(IfcBooleanOperator.DIFFERENCE,
                                                  ellipsoidDifference,
@@ -1212,7 +1309,56 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull FaceSet obj) {
+        IfcCartesianPoint[] vertices =
+                new IfcCartesianPoint[obj.getVertices().length / 3];
+        IntStream.range(0, vertices.length).forEach(i -> {
+            int offset = i * 3;
+            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset],
+                                                obj.getVertices()[offset + 1],
+                                                obj.getVertices()[offset + 2]);
+        });
 
+        Set<IfcFace> faces = new HashSet<>();
+
+        int vertSizeIndex = 0;
+        while (vertSizeIndex < obj.getFaces().length) {
+            int vertSize = obj.getFaces()[vertSizeIndex];
+            IfcCartesianPoint[] polyVerts = new IfcCartesianPoint[vertSize];
+
+            for (int i = 0, j = vertSizeIndex + 1; i < vertSize; i++, j++) {
+                // i iterates on elements of polyVerts,
+                // j iterates on the indices of vertices composing the polygon
+                polyVerts[i] = vertices[obj.getFaces()[j]];
+            }
+
+            try {
+                IfcPolyLoop polygon = new IfcPolyLoop(polyVerts);
+                faces.add(new IfcFace(new IfcFaceBound(polygon, IfcBoolean.T)));
+            } catch (IllegalArgumentException e) {
+                // polygon contains multiple instances of the same
+                // IfcCartesianPoint
+            }
+            vertSizeIndex += 1 + vertSize;
+        }
+
+        IfcFacetedBrep faceSet = new IfcFacetedBrep(new IfcClosedShell(faces));
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("Brep"),
+                faceSet);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy faceSetProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(faceSetProxy);
     }
 
     /**
@@ -1294,7 +1440,58 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Mesh obj) {
+        IfcCartesianPoint[] vertices =
+                new IfcCartesianPoint[obj.getVertices().length / 3];
+        IntStream.range(0, vertices.length).forEach(i -> {
+            int offset = i * 3;
+            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset],
+                                                obj.getVertices()[offset + 1],
+                                                obj.getVertices()[offset + 2]);
+        });
 
+        Set<IfcFace> faces = new HashSet<>();
+
+        int vertSizeIndex = 0;
+        while (vertSizeIndex < obj.getFaces().length) {
+            int vertSize = obj.getFaces()[vertSizeIndex] == 1 ? 4 : 3;
+            IfcCartesianPoint[] polyVerts = new IfcCartesianPoint[vertSize];
+
+            for (int i = 0, j = vertSizeIndex + 1; i < vertSize; i++, j++) {
+                // i iterates on elements of polyVerts,
+                // j iterates on the indices of vertices composing the polygon
+                polyVerts[i] = vertices[obj.getFaces()[j]];
+            }
+
+            try {
+                IfcPolyLoop polygon = new IfcPolyLoop(polyVerts);
+                faces.add(new IfcFace(new IfcFaceBound(polygon, IfcBoolean.T)));
+            } catch (IllegalArgumentException e) {
+                // polygon contains multiple instances of the same
+                // IfcCartesianPoint
+            }
+            vertSizeIndex += 1 + vertSize;
+        }
+
+        IfcFacetedBrep mesh = new IfcFacetedBrep(new IfcClosedShell(faces));
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("Brep"),
+                mesh);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        String name = obj.getRepresenting() == null ||
+                obj.getRepresenting().equals("") ?
+                obj.getClass().getSimpleName() : obj.getRepresenting();
+        IfcProxy meshProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory).name(new IfcLabel(name))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(meshProxy);
     }
 
     /**
