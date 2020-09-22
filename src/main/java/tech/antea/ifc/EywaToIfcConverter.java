@@ -449,7 +449,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                          length))
                 .toArray(IfcCartesianPoint[]::new);
 
-        Set<IfcFace> faces = new HashSet<>(2 + angles.length, 1);
+        Set<IfcFace> faces = new HashSet<>(3 + angles.length, 1);
         IfcPolyLoop bottomBase = new IfcPolyLoop(outerBottomCircle);
         IfcPolyLoop topBase = new IfcPolyLoop(outerTopCircle);
         faces.add(new IfcFace(new IfcFaceBound(bottomBase, IfcBoolean.T)));
@@ -789,7 +789,7 @@ public class EywaToIfcConverter implements EywaConverter {
         boolean hasPlate =
                 obj.getCrownRadius() != null && obj.getCrownRadius() != 0;
         Set<IfcRepresentationItem> blindItems =
-                new HashSet<>(hasPlate ? 2 : 1, 1);
+                new HashSet<>(hasPlate ? 3 : 2, 1);
         double blindRadius = hasPlate ? obj.getCrownRadius() : obj.getRadius();
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
@@ -1503,7 +1503,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Nozzle obj) {
-        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(4, 1);
+        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(5, 1);
         boolean hasTrunk =
                 obj.getTrunkLength() != null && obj.getTrunkLength() != 0;
         boolean hasTang =
@@ -1780,7 +1780,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
         double neckLength = obj.getLength() - obj.getEndThickness();
         Set<IfcRepresentationItem> endplateItems =
-                new HashSet<>(neckLength == 0 ? 1 : 2, 1);
+                new HashSet<>(neckLength == 0 ? 2 : 3, 1);
 
         IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
                 IfcProfileTypeEnum.AREA,

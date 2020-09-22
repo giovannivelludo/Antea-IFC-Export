@@ -105,7 +105,7 @@ class ValveBuilder {
                                                                double crownRadius,
                                                                double crownThickness,
                                                                double bottomOutputLength) {
-        Set<IfcRepresentationItem> outputItems = new HashSet<>(2, 1);
+        Set<IfcRepresentationItem> outputItems = new HashSet<>(3, 1);
 
         // placing the output according to position
         IfcCartesianPoint location;
@@ -305,7 +305,7 @@ class ValveBuilder {
                     "a bottom output must be added before building the valve");
         }
         // we'll have at most 1 sphere, 4 cones and 4 flanges
-        Set<IfcRepresentationItem> valveItems = new HashSet<>(9, 1);
+        Set<IfcRepresentationItem> valveItems = new HashSet<>(10, 1);
         List<Double> possibleSphereRadiuses = new ArrayList<>(8);
 
         for (byte i = 0; i < outputs.length; i++) {
