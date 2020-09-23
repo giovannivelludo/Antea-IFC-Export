@@ -57,7 +57,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * Number of points used to draw circles in
      * {@link #addObject(EccentricCone)}.
      */
-    private static final int CIRCLE_POINTS = 32;
+    private static final int RADIAL_SEGMENTS = 32;
 
     private static final String COMPANY_NAME = "Antea";
     private static final String PROGRAM_NAME = "Antea IFC Export";
@@ -1049,7 +1049,59 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Dish obj) {
+        IfcCircleProfileDef circle =
+                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
+                                        null,
+                                        new IfcAxis2Placement2D(0, 0),
+                                        new IfcPositiveLengthMeasure(obj.getRadius()));
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
+                                                               new IfcAxis2Placement3D(
+                                                                       0,
+                                                                       0,
+                                                                       0),
+                                                               rotationAxis,
+                                                               new IfcPlaneAngleMeasure(
+                                                                       PI));
 
+        IfcCartesianPoint cuttingPlaneLocation =
+                new IfcCartesianPoint(obj.getDirection()[0] * obj.getDistance(),
+                                      obj.getDirection()[1] * obj.getDistance(),
+                                      obj.getDirection()[2] *
+                                              obj.getDistance());
+        IfcDirection planeNormal = new IfcDirection(obj.getDirection()[0],
+                                                    obj.getDirection()[1],
+                                                    obj.getDirection()[2]);
+        IfcPlane cuttingPlane = new IfcPlane(new IfcAxis2Placement3D(
+                cuttingPlaneLocation,
+                planeNormal,
+                new IfcDirection(1, 0, 0)));
+        IfcHalfSpaceSolid cuttingPlaneWrapper =
+                new IfcHalfSpaceSolid(cuttingPlane, IfcBoolean.T);
+        //TODO: test that the sphere is cut on the correct side of the plane
+        IfcBooleanClippingResult dish = new IfcBooleanClippingResult(
+                IfcBooleanOperator.DIFFERENCE,
+                sphere,
+                cuttingPlaneWrapper);
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("Clipping"),
+                dish);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy dishProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(dishProxy);
     }
 
     /**
@@ -1073,10 +1125,10 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull EccentricCone obj) {
-        double slice = 2 * PI / CIRCLE_POINTS;
+        double slice = 2 * PI / RADIAL_SEGMENTS;
         // angles at which the points composing the circle will be drawn
         double[] angles =
-                IntStream.range(0, CIRCLE_POINTS).mapToDouble(i -> i * slice)
+                IntStream.range(0, RADIAL_SEGMENTS).mapToDouble(i -> i * slice)
                         .toArray();
 
         IfcFacetedBrep outerCone = buildEccentricCone(angles,
@@ -1428,7 +1480,68 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Instrument obj) {
+        double poleRadius = obj.getRadius() / 4;
+        double poleHeight = obj.getRadius() * 2;
+        double discRadius = obj.getRadius();
+        double discHeight = obj.getRadius() / 2;
+        IfcAxis2Placement2D center = new IfcAxis2Placement2D(0, 0);
 
+        IfcCircleProfileDef poleSection = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                center,
+                new IfcPositiveLengthMeasure(poleRadius));
+        IfcExtrudedAreaSolid pole = new IfcExtrudedAreaSolid(poleSection,
+                                                             new IfcAxis2Placement3D(
+                                                                     0,
+                                                                     0,
+                                                                     0),
+                                                             new IfcDirection(0,
+                                                                              0,
+                                                                              1),
+                                                             new IfcLengthMeasure(
+                                                                     poleHeight));
+
+        IfcCircleProfileDef discSection = new IfcCircleProfileDef(
+                IfcProfileTypeEnum.AREA,
+                null,
+                center,
+                new IfcPositiveLengthMeasure(discRadius));
+        IfcAxis2Placement3D discPosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0,
+                                                              0,
+                                                              poleHeight +
+                                                                      discRadius),
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcExtrudedAreaSolid disc = new IfcExtrudedAreaSolid(discSection,
+                                                             discPosition,
+                                                             new IfcDirection(0,
+                                                                              0,
+                                                                              1),
+                                                             new IfcLengthMeasure(
+                                                                     discHeight));
+        //TODO: figure out whether we should use values in rotation to rotate
+        // the disc or if the entire instrument is already rotated
+        // appropriately in resolveLocation(obj)
+
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                pole,
+                disc);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy instrumentProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(instrumentProxy);
     }
 
     /**
@@ -2175,7 +2288,38 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Sphere obj) {
-
+        IfcCircleProfileDef circle =
+                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
+                                        null,
+                                        new IfcAxis2Placement2D(0, 0),
+                                        new IfcPositiveLengthMeasure(obj.getRadius()));
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
+                                                               new IfcAxis2Placement3D(
+                                                                       0,
+                                                                       0,
+                                                                       0),
+                                                               rotationAxis,
+                                                               new IfcPlaneAngleMeasure(
+                                                                       PI));
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                sphere);
+        IfcProductDefinitionShape productDefinitionShape =
+                new IfcProductDefinitionShape(null, null, shapeRepresentation);
+        IfcProxy sphereProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(productDefinitionShape)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(sphereProxy);
     }
 
     /**
