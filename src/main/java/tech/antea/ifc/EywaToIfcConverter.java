@@ -475,6 +475,111 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * Method used to convert both {@link ExpansionJoint} and {@link
+     * DualExpansionJoint}, since they represent the same geometry.
+     *
+     * @param radius    Radius of the ExpansionJoint.
+     * @param length    Length of the ExpansionJoint.
+     * @param thickness Thickness of the ExpansionJoint.
+     * @return The {@link IfcProductDefinitionShape} containing the geometries
+     * that represent the ExpansionJoint, ready to be put in the {@link
+     * IfcProduct} that is the conversion of the ExpansionJoint.
+     */
+    private static IfcProductDefinitionShape buildExpansionJoint(double radius,
+                                                                 double length,
+                                                                 double thickness) {
+        double radiusThird = radius / 3;
+        double radiusPlusRadiusThird = radius + radiusThird;
+        double radiusMinusRadiusThird = radius - radiusThird;
+        double lengthThirtieth = length / 30;
+        double innerRadius = radius - thickness;
+        double innerRadiusPlusRadiusThird = radius + radiusThird;
+        double innerRadiusMinusRadiusThird = radius - radiusThird;
+
+        // creating the right part of the vertical section of the expansionJoint
+        IfcPolyline expJointSection =
+                new IfcPolyline(new IfcCartesianPoint(radius, 0),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      lengthThirtieth),
+                                new IfcCartesianPoint(radiusMinusRadiusThird,
+                                                      3 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      5 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusMinusRadiusThird,
+                                                      7 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      9 * lengthThirtieth),
+                                new IfcCartesianPoint(radius,
+                                                      10 * lengthThirtieth),
+                                new IfcCartesianPoint(radius,
+                                                      20 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      21 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusMinusRadiusThird,
+                                                      23 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      25 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusMinusRadiusThird,
+                                                      27 * lengthThirtieth),
+                                new IfcCartesianPoint(radiusPlusRadiusThird,
+                                                      29 * lengthThirtieth),
+                                new IfcCartesianPoint(radius, length),
+                                new IfcCartesianPoint(innerRadius, length),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      29 * lengthThirtieth),
+                                new IfcCartesianPoint(
+                                        innerRadiusMinusRadiusThird,
+                                        27 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      25 * lengthThirtieth),
+                                new IfcCartesianPoint(
+                                        innerRadiusMinusRadiusThird,
+                                        23 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      21 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadius,
+                                                      20 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadius,
+                                                      10 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      9 * lengthThirtieth),
+                                new IfcCartesianPoint(
+                                        innerRadiusMinusRadiusThird,
+                                        7 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      5 * lengthThirtieth),
+                                new IfcCartesianPoint(
+                                        innerRadiusMinusRadiusThird,
+                                        3 * lengthThirtieth),
+                                new IfcCartesianPoint(innerRadiusPlusRadiusThird,
+                                                      lengthThirtieth),
+                                new IfcCartesianPoint(innerRadius, 0));
+        IfcArbitraryClosedProfileDef expJointSectionWrapper =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 expJointSection);
+        IfcAxis2Placement3D expJointPosition =
+                new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                        // the z axis is rotated by PI/2
+                                        // towards the negative y axis, and
+                                        // the y axis becomes the vertical axis
+                                        new IfcDirection(0, -1, 0),
+                                        new IfcDirection(1, 0, 0));
+        IfcRevolvedAreaSolid expansionJoint = new IfcRevolvedAreaSolid(
+                expJointSectionWrapper,
+                expJointPosition,
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0)),
+                new IfcPlaneAngleMeasure(2 * PI));
+        IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
+                GEOMETRIC_REPRESENTATION_CONTEXT,
+                new IfcLabel("Body"),
+                new IfcLabel("SweptSolid"),
+                expansionJoint);
+        return new IfcProductDefinitionShape(null, null, shapeRepresentation);
+    }
+
+    /**
      * @return The result of the conversion.
      */
     @Override
@@ -1113,7 +1218,19 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull DualExpansionJoint obj) {
-
+        IfcProductDefinitionShape expansionJoint =
+                buildExpansionJoint(obj.getRadius(),
+                                    obj.getLength(),
+                                    obj.getThickness());
+        IfcProxy expansionJointProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(expansionJoint)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(expansionJointProxy);
     }
 
     /**
@@ -1349,7 +1466,19 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull ExpansionJoint obj) {
-
+        IfcProductDefinitionShape expansionJoint =
+                buildExpansionJoint(obj.getRadius(),
+                                    obj.getLength(),
+                                    obj.getThickness());
+        IfcProxy expansionJointProxy =
+                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+                        .ownerHistory(ownerHistory)
+                        .name(new IfcLabel(obj.getClass().getSimpleName()))
+                        .description(new IfcText(getDescription(obj)))
+                        .objectPlacement(resolveLocation(obj))
+                        .representation(expansionJoint)
+                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        geometries.add(expansionJointProxy);
     }
 
     /**
