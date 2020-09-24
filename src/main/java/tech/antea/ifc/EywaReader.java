@@ -40,7 +40,9 @@ import java.util.function.Consumer;
  * another format, depending on the {@link EywaConverter} passed in the
  * constructor.<br> To convert an {@link EywaRoot}: pass an {@link
  * EywaConverter} in the constructor, call {@link #convert(EywaRoot)}, then
- * {@link #getResult()}.
+ * {@link #getResult()}.<br>If the {@code builder} passed to the constructor can
+ * be used for multiple conversions, then the instance of this class can be
+ * reused.
  */
 public class EywaReader {
     private EywaConverter builder;
@@ -95,6 +97,9 @@ public class EywaReader {
             }});
 
     /**
+     * If {@code builder} can be used for multiple conversions, then the
+     * generated instance of this class can be reused too.
+     *
      * @param builder The {@link EywaConverter} to use for the conversion.
      * @throws NullPointerException If {@code builder} is {@code null}.
      */

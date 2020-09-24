@@ -77,11 +77,6 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                           0,
                                                                           0),
                                                   null);
-
-    /**
-     * Owner history for all {@link IfcRoot} objects in this project.
-     */
-    private final IfcOwnerHistory ownerHistory;
     /**
      * The set containing the converted Eywa geometries.
      */
@@ -91,40 +86,18 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     private final Map<Primitive, IfcLocalPlacement> objPositions =
             new HashMap<>();
+    /**
+     * Owner history for all {@link IfcRoot} objects in this project.
+     */
+    private IfcOwnerHistory ownerHistory;
     private Map<String, Object> hints;
 
     /**
-     * Initializes {@code this.ownerHistory} because this field will be needed
-     * when creating the IfcProducts that represent instances of Eywa
-     * Primitives.
+     * Creates a new instance of this class, which can be reused for multiple
+     * conversions after calling {@link #getResult()}.
      */
     public EywaToIfcConverter() {
-        IfcPerson person =
-                IfcPerson.builder().givenName(new IfcLabel("")).build();
-        IfcActorRole anteaRole =
-                new IfcActorRole(IfcRoleEnum.CONSULTANT, null, null);
-        IfcOrganization organization =
-                IfcOrganization.builder().name(new IfcLabel(COMPANY_NAME))
-                        .roles(Collections.singletonList(anteaRole)).build();
-        IfcPersonAndOrganization personAndOrganization =
-                new IfcPersonAndOrganization(person, organization, null);
-        IfcApplication.clearUniqueConstraint();
-        IfcApplication application = new IfcApplication(organization,
-                                                        new IfcLabel(
-                                                                PROGRAM_VERSION),
-                                                        new IfcLabel(
-                                                                PROGRAM_NAME),
-                                                        new IfcIdentifier(
-                                                                PROGRAM_ID));
-        IfcTimeStamp currentTime = new IfcTimeStamp();
-        this.ownerHistory = new IfcOwnerHistory(personAndOrganization,
-                                                application,
-                                                null,
-                                                IfcChangeActionEnum.ADDED,
-                                                currentTime,
-                                                personAndOrganization,
-                                                application,
-                                                currentTime);
+        initializeOwnerHistory();
     }
 
     /**
@@ -580,6 +553,42 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * Initializes {@code this.ownerHistory}. This field will be needed when
+     * creating the IfcProducts that represent instances of Eywa Primitives.
+     */
+    private void initializeOwnerHistory() {
+        IfcPerson person =
+                IfcPerson.builder().givenName(new IfcLabel("")).build();
+        IfcActorRole anteaRole =
+                new IfcActorRole(IfcRoleEnum.CONSULTANT, null, null);
+        IfcOrganization organization =
+                IfcOrganization.builder().name(new IfcLabel(COMPANY_NAME))
+                        .roles(Collections.singletonList(anteaRole)).build();
+        IfcPersonAndOrganization personAndOrganization =
+                new IfcPersonAndOrganization(person, organization, null);
+        IfcApplication.clearUniqueConstraint();
+        IfcApplication application = new IfcApplication(organization,
+                                                        new IfcLabel(
+                                                                PROGRAM_VERSION),
+                                                        new IfcLabel(
+                                                                PROGRAM_NAME),
+                                                        new IfcIdentifier(
+                                                                PROGRAM_ID));
+        IfcTimeStamp currentTime = new IfcTimeStamp();
+        this.ownerHistory = new IfcOwnerHistory(personAndOrganization,
+                                                application,
+                                                null,
+                                                IfcChangeActionEnum.ADDED,
+                                                currentTime,
+                                                personAndOrganization,
+                                                application,
+                                                currentTime);
+    }
+
+    /**
+     * After calling this method internal state is reset, so that the instance
+     * of this class can be used for another conversion.
+     *
      * @return The result of the conversion.
      */
     @Override
@@ -623,6 +632,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 .ownerHistory(ownerHistory)
                 .name(new IfcLabel("Site to geometries link"))
                 .relatingStructure(ifcSite).relatedElements(geometries).build();
+
+        // resetting fields used during the conversion
+        geometries.clear();
+        objPositions.clear();
+        hints = null;
+
+        // updating ownerHistory with a recent date, in case this object will
+        // be used for another conversion
+        initializeOwnerHistory();
 
         return ifcProject;
     }
@@ -1682,6 +1700,9 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Ladder obj) {
+        new IllegalArgumentException(
+                "conversion of Ladder objects is currently not supported")
+                .printStackTrace();
         resolveLocation(obj);
     }
 
@@ -2483,6 +2504,9 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Stair obj) {
+        new IllegalArgumentException(
+                "conversion of Stair objects is currently not supported")
+                .printStackTrace();
         resolveLocation(obj);
     }
 
@@ -2495,7 +2519,58 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Sweep obj) {
+        new IllegalArgumentException(
+                "conversion of Sweep objects is currently not supported")
+                .printStackTrace();
+        resolveLocation(obj);
+        //IfcArbitraryClosedProfileDef shape;
+        //if (obj.getCurves().length > 1) {
+        //    shape = new IfcArbitraryProfileDefWithVoids(IfcProfileTypeEnum
+        //    .AREA,
+        //                                                null,
+        //                                                outerCurve,
+        //                                                innerCurves);
+        //} else {
+        //    shape = new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+        //                                             null,
+        //                                             outerCurve);
+        //}
+        //IfcExtrudedAreaSolid sweep = new IfcExtrudedAreaSolid(shape,
+        //                                                      new
+        //                                                      IfcAxis2Placement3D(
+        //                                                              0,
+        //                                                              0,
+        //                                                              0),
+        //                                                      new
+        //                                                      IfcDirection(0,
+        //                                                                       0,
+        //                                                                       1),
+        //                                                      new
+        //                                                      IfcLengthMeasure(
+        //                                                              getSafeThickness(
+        //                                                                      obj)));
+        ////  cut sweep if n2 is not parallel to the extrusion direction.
+        ////  If this is the case, direction should be longer to allow for
+        ////  uniform cutting
 
+        //IfcShapeRepresentation shapeRepresentation = new
+        // IfcShapeRepresentation(
+        //        GEOMETRIC_REPRESENTATION_CONTEXT,
+        //        new IfcLabel("Body"),
+        //        new IfcLabel("SweptSolid"),
+        //        sweep);
+        //IfcProductDefinitionShape productDefinitionShape =
+        //        new IfcProductDefinitionShape(null, null,
+        //        shapeRepresentation);
+        //IfcProxy sweepProxy =
+        //        IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        //                .ownerHistory(ownerHistory)
+        //                .name(new IfcLabel(obj.getClass().getSimpleName()))
+        //                .description(new IfcText(getDescription(obj)))
+        //                .objectPlacement(resolveLocation(obj))
+        //                .representation(productDefinitionShape)
+        //                .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        //geometries.add(sweepProxy);
     }
 
     /**
