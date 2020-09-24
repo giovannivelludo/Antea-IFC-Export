@@ -1912,7 +1912,18 @@ public class EywaToIfcConverter implements EywaConverter {
     public void addObject(@NonNull RectangularEndplate obj) {
         IfcAxis2Placement2D centre = new IfcAxis2Placement2D(0, 0);
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
-        double neckLength = obj.getLength() - obj.getEndThickness();
+        double length = obj.getLength() == null || obj.getLength() <= 0 ? 0 :
+                obj.getLength();
+        double endThickness =
+                obj.getEndThickness() == null || obj.getEndThickness() <= 0 ?
+                        0 : obj.getEndThickness();
+        double neckLength;
+        if (obj.getLength() == null) {
+            neckLength = 0;
+            length = endThickness;
+        } else {
+            neckLength = length - endThickness;
+        }
         Set<IfcRepresentationItem> endplateItems =
                 new HashSet<>(neckLength == 0 ? 2 : 3, 1);
 
@@ -1961,7 +1972,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcLocalPlacement location = resolveLocation(obj);
         if (obj.isSwitched()) {
-            location = flip(location, obj.getLength());
+            location = flip(location, length);
         }
         IfcProxy rectEndplate =
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
@@ -1984,23 +1995,35 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(@NonNull RectangularFlange obj) {
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
+        double neckLength =
+                obj.getNeck() == null || obj.getNeck() <= 0 ? 0 : obj.getNeck();
+        double length = obj.getLength() == null || obj.getLength() <= 0 ? 0 :
+                obj.getLength();
+        if (neckLength == 0 && length != 0) {
+            neckLength = length - obj.getCrownThickness();
+        }
+        Set<IfcRepresentationItem> flangeItems =
+                new HashSet<>(neckLength == 0 ? 2 : 3, 1);
 
-        IfcRectangleHollowProfileDef neckSection =
-                IfcRectangleHollowProfileDef.builder()
-                        .profileType(IfcProfileTypeEnum.AREA)
-                        .position(new IfcAxis2Placement2D(0, 0))
-                        .xDim(new IfcPositiveLengthMeasure(obj.getWidth()))
-                        .yDim(new IfcPositiveLengthMeasure(obj.getDepth()))
-                        .wallThickness(new IfcPositiveLengthMeasure(
-                                getSafeThickness(obj))).build();
-        IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(neckSection,
-                                                             new IfcAxis2Placement3D(
-                                                                     0,
-                                                                     0,
-                                                                     0),
-                                                             extrusionDirection,
-                                                             new IfcLengthMeasure(
-                                                                     obj.getNeck()));
+        if (neckLength != 0) {
+            IfcRectangleHollowProfileDef neckSection =
+                    IfcRectangleHollowProfileDef.builder()
+                            .profileType(IfcProfileTypeEnum.AREA)
+                            .position(new IfcAxis2Placement2D(0, 0))
+                            .xDim(new IfcPositiveLengthMeasure(obj.getWidth()))
+                            .yDim(new IfcPositiveLengthMeasure(obj.getDepth()))
+                            .wallThickness(new IfcPositiveLengthMeasure(
+                                    getSafeThickness(obj))).build();
+            IfcExtrudedAreaSolid neck = new IfcExtrudedAreaSolid(neckSection,
+                                                                 new IfcAxis2Placement3D(
+                                                                         0,
+                                                                         0,
+                                                                         0),
+                                                                 extrusionDirection,
+                                                                 new IfcLengthMeasure(
+                                                                         neckLength));
+            flangeItems.add(neck);
+        }
 
         double halfInnerCrownWidth = obj.getWidth() / 2 - getSafeThickness(obj);
         double halfInnerCrownDepth = obj.getDepth() / 2 - getSafeThickness(obj);
@@ -2035,17 +2058,17 @@ public class EywaToIfcConverter implements EywaConverter {
                                                               new IfcAxis2Placement3D(
                                                                       0,
                                                                       0,
-                                                                      obj.getNeck()),
+                                                                      neckLength),
                                                               extrusionDirection,
                                                               new IfcLengthMeasure(
                                                                       obj.getCrownThickness()));
+        flangeItems.add(crown);
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
-                neck,
-                crown);
+                flangeItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcProxy rectFlange =
