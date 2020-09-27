@@ -1354,6 +1354,9 @@ public class EywaToIfcConverter implements EywaConverter {
                     new IfcPositiveLengthMeasure(obj.getRadius()));
             IfcAxis2Placement3D platePosition =
                     new IfcAxis2Placement3D(0, 0, obj.getNeck());
+            double endThickness = obj.getEndThickness() == null ||
+                    obj.getEndThickness() <= 0 ? getSafeThickness(obj) :
+                    obj.getEndThickness();
             IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
                                                                   platePosition,
                                                                   new IfcDirection(
@@ -1361,7 +1364,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                           0,
                                                                           1),
                                                                   new IfcLengthMeasure(
-                                                                          obj.getEndThickness()));
+                                                                          endThickness));
             if (hasNeck) {
                 endplate = new IfcBooleanResult(IfcBooleanOperator.UNION,
                                                 neck,
@@ -1960,9 +1963,8 @@ public class EywaToIfcConverter implements EywaConverter {
                                     obj.getCrownRadius2(),
                                     obj.getCrownThickness2());
         } else {
-            valveBuilder
-                    .addBottomOutput(obj.getRadius1(), obj.getLength1(), 0, 0)
-                    .addTopOutput(obj.getRadius2(), obj.getLength2(), 0, 0);
+            valveBuilder.addBottomOutput(radius1, obj.getLength1(), 0, 0)
+                    .addTopOutput(radius2, obj.getLength2(), 0, 0);
         }
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
@@ -1992,40 +1994,42 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull RectangularBlind obj) {
-        IfcAxis2Placement3D origin = new IfcAxis2Placement3D(0, 0, 0);
         IfcAxis2Placement2D centre = new IfcAxis2Placement2D(0, 0);
-        IfcRectangleProfileDef blindSection = new IfcRectangleProfileDef(
+        double blindThickness = getSafeThickness(obj);
+        double plateThickness = getSafeThickness(obj) / 10;
+        IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
                 centre,
                 new IfcPositiveLengthMeasure(obj.getWidth()),
                 new IfcPositiveLengthMeasure(obj.getDepth()));
-        IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindSection,
-                                                              origin,
+        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
+                                                              new IfcAxis2Placement3D(
+                                                                      0,
+                                                                      0,
+                                                                      0),
                                                               new IfcDirection(0,
                                                                                0,
                                                                                1),
                                                               new IfcLengthMeasure(
-                                                                      getSafeThickness(
-                                                                              obj)));
+                                                                      plateThickness));
 
-        IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
+        IfcRectangleProfileDef blindSection = new IfcRectangleProfileDef(
                 IfcProfileTypeEnum.AREA,
                 null,
                 centre,
-                new IfcPositiveLengthMeasure(
-                        obj.getWidth() - (obj.getCrownWidth() * 2)),
-                new IfcPositiveLengthMeasure(
-                        obj.getDepth() - (obj.getCrownDepth() * 2)));
-        IfcExtrudedAreaSolid plate = new IfcExtrudedAreaSolid(plateSection,
-                                                              origin,
+                new IfcPositiveLengthMeasure(obj.getCrownWidth()),
+                new IfcPositiveLengthMeasure(obj.getCrownDepth()));
+        IfcExtrudedAreaSolid blind = new IfcExtrudedAreaSolid(blindSection,
+                                                              new IfcAxis2Placement3D(
+                                                                      0,
+                                                                      0,
+                                                                      plateThickness),
                                                               new IfcDirection(0,
                                                                                0,
-                                                                               -1),
+                                                                               1),
                                                               new IfcLengthMeasure(
-                                                                      getSafeThickness(
-                                                                              obj) /
-                                                                              10));
+                                                                      blindThickness));
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -2037,8 +2041,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcLocalPlacement location = resolveLocation(obj);
         if (obj.isSwitched()) {
-            location = flip(location,
-                            getSafeThickness(obj) + getSafeThickness(obj) / 10);
+            location = flip(location, blindThickness + plateThickness);
         }
         IfcProxy rectBlind =
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
@@ -2833,9 +2836,8 @@ public class EywaToIfcConverter implements EywaConverter {
                     obj.getCrownRadius2(),
                     obj.getCrownThickness2());
         } else {
-            valveBuilder
-                    .addBottomOutput(obj.getRadius1(), obj.getLength1(), 0, 0)
-                    .addTopOutput(obj.getRadius2(), obj.getLength2(), 0, 0);
+            valveBuilder.addBottomOutput(radius1, obj.getLength1(), 0, 0)
+                    .addTopOutput(radius2, obj.getLength2(), 0, 0);
         }
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(

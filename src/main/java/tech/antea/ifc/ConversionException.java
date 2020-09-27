@@ -28,9 +28,11 @@
 package tech.antea.ifc;
 
 /**
- * Thrown when an error during conversion occurs. This exception always wraps
- * another exception that is the cause, which can be obtained with {@link
- * #getCause()}.
+ * Thrown when an error during conversion occurs. The point of this exception is
+ * wrapping the checked exception that is the cause, which can be obtained with
+ * {@link #getCause()}. This is done because otherwise classes implementing
+ * {@link EywaConverter} wouldn't be able to throw checked exceptions in the
+ * implemented methods, since they're not declared in the interface.
  */
 public class ConversionException extends RuntimeException {
     /**
