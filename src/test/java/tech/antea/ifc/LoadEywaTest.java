@@ -1,6 +1,7 @@
 package tech.antea.ifc;
 
 import buildingsmart.ifc.IfcProject;
+import buildingsmart.ifc.IfcRoot;
 import buildingsmart.util.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.classgraph.ClassGraph;
@@ -13,14 +14,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.reflections.Reflections;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -52,6 +56,18 @@ public class LoadEywaTest {
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final EywaReader reader =
             new EywaReader(new EywaToIfcConverter());
+    private static final String[] ifcRootSubclassesRegex;
+
+    static {
+        Reflections reflections = new Reflections("buildingsmart.ifc");
+        Set<Class<? extends IfcRoot>> subTypes =
+                reflections.getSubTypesOf(IfcRoot.class);
+        ifcRootSubclassesRegex = subTypes.stream()
+                .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
+                .map(clazz -> "^#[0-9]+=" +
+                        clazz.getSimpleName().toUpperCase() + "\\(.*")
+                .toArray(String[]::new);
+    }
 
     private final Pair<URL, URL> inputAndExpectedOutput;
 
@@ -97,7 +113,7 @@ public class LoadEywaTest {
             throws IOException {
         List<String> lines = Files.readAllLines(Paths.get(filePath),
                                                 StandardCharsets.US_ASCII);
-        removeNonDeterministicOutput(lines);
+        lines = removeNonDeterministicOutput(lines);
         StringBuilder dataSection = new StringBuilder();
         for (int i = 6; i < lines.size() - 1; i++) {
             // DATA section starts at line 6 (if the first one is line 0) and
@@ -114,21 +130,21 @@ public class LoadEywaTest {
      * IFCOWNERHISTORY and GlobalIds in entities that are subtypes of IFCROOT.
      *
      * @param strings The input List of Strings.
+     * @return A copy of {@code strings} without non-deterministic substrings.
      */
-    private static void removeNonDeterministicOutput(@NonNull List<String> strings) {
-        strings.replaceAll(s -> {
+    private static List<String> removeNonDeterministicOutput(@NonNull List<String> strings) {
+        return strings.parallelStream().map(s -> {
             if (s.matches("^#[0-9]+=IFCOWNERHISTORY\\(.*")) {
                 return s.replaceAll("[0-9]{10,}", "");
-            } else if (s.matches("^#[0-9]+=IFCPROJECT\\(.*") ||
-                    s.matches("^#[0-9]+=IFCSITE\\(.*") ||
-                    s.matches("^#[0-9]+=IFCRELAGGREGATES\\(.*") ||
-                    s.matches("^#[0-9]+=IFCPROXY\\(.*") || s.matches(
-                    "^#[0-9]+=IFCRELCONTAINEDINSPATIALSTRUCTURE\\(" + ".*")) {
-                return s.replaceFirst(Matcher.quoteReplacement(
-                        "'[0-9A-Za-z_$]+'"), "''");
+            }
+            for (String regex : ifcRootSubclassesRegex) {
+                if (s.matches(regex)) {
+                    return s.replaceFirst(Matcher.quoteReplacement(
+                            "'[0-9A-Za-z_$]+'"), "''");
+                }
             }
             return s;
-        });
+        }).collect(Collectors.toList());
     }
 
     /**
