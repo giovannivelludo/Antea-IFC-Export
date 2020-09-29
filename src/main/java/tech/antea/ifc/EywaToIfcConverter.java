@@ -714,7 +714,10 @@ public class EywaToIfcConverter implements EywaConverter {
                                             new IfcDirection(newAxis),
                                             new IfcDirection(newRefDir));
         } else if (obj.getPosition() == null && obj.getRotation() == null) {
-            objPosition = new IfcAxis2Placement3D(0, 0, 0);
+            objPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 0, 1),
+                                            new IfcDirection(1, 0, 0));
         } else {
             // using position and rotation
             double[] location = new double[3];
@@ -739,15 +742,15 @@ public class EywaToIfcConverter implements EywaConverter {
                     obj.getRotationArray() == null ? new double[]{0, 0, 0} :
                             Arrays.stream(obj.getRotationArray())
                                     .mapToDouble(Double::doubleValue).toArray();
-            String rotationAxis = obj.getRotationAxis() == null ||
+            String rotationOrder = obj.getRotationAxis() == null ||
                     obj.getRotationAxis().equals("") ? "XYZ" :
                     obj.getRotationAxis();
 
             location[0] = location[0] + position[0];
             location[1] = location[1] + position[1];
             location[2] = location[2] + position[2];
-            rotate(axis, rotationAngles, rotationAxis);
-            rotate(refDir, rotationAngles, rotationAxis);
+            rotate(axis, rotationAngles, rotationOrder);
+            rotate(refDir, rotationAngles, rotationOrder);
 
             objPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(location),
@@ -1202,8 +1205,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 planeNormal,
                 new IfcDirection(1, 0, 0)));
         IfcHalfSpaceSolid cuttingPlaneWrapper =
-                new IfcHalfSpaceSolid(cuttingPlane, IfcBoolean.T);
-        //TODO: test that the sphere is cut on the correct side of the plane
+                new IfcHalfSpaceSolid(cuttingPlane, IfcBoolean.F);
         IfcBooleanClippingResult dish = new IfcBooleanClippingResult(
                 IfcBooleanOperator.DIFFERENCE,
                 sphere,
@@ -1671,9 +1673,6 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                               1),
                                                              new IfcLengthMeasure(
                                                                      discHeight));
-        //TODO: figure out whether we should use values in rotation to rotate
-        // the disc or if the entire instrument is already rotated
-        // appropriately in resolveLocation(obj)
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -1683,12 +1682,49 @@ public class EywaToIfcConverter implements EywaConverter {
                 disc);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
+
+        IfcLocalPlacement instrProxyPlac = resolveLocation(obj);
+        if (obj.getRotationArray() != null &&
+                !Arrays.equals(obj.getRotationArray(),
+                               new Double[]{0d, 0d, 0d}) &&
+                !Arrays.equals(obj.getRotationArray(),
+                               new Double[]{-0d, -0d, -0d})) {
+            double[] rotationAngles = Arrays.stream(obj.getRotationArray())
+                    .mapToDouble(Double::doubleValue).toArray();
+            IfcAxis2Placement3D localCoordSys =
+                    (IfcAxis2Placement3D) instrProxyPlac.getRelativePlacement();
+
+            // rotating axis and refDirection of the Instrument's coordinate
+            // system
+            double[] axisCoords =
+                    localCoordSys.getAxis().getNormalisedDirectionRatios()
+                            .stream().mapToDouble(IfcReal::getValue).toArray();
+            double[] refDirCoords = localCoordSys.getRefDirection()
+                    .getNormalisedDirectionRatios().stream()
+                    .mapToDouble(IfcReal::getValue).toArray();
+            rotate(axisCoords, rotationAngles, "XYZ");
+            rotate(refDirCoords, rotationAngles, "XYZ");
+            IfcDirection rotatedAxis = new IfcDirection(axisCoords);
+            IfcDirection rotatedRefDir = new IfcDirection(refDirCoords);
+
+            // this doesn't modify the IfcAxis2Placement3D associated to obj
+            // in objPositions, which must not be modified because it's used to
+            // calculate the location of children of obj
+            IfcAxis2Placement3D newLocalCoordSys = new IfcAxis2Placement3D(
+                    localCoordSys.getLocation(),
+                    rotatedAxis,
+                    rotatedRefDir);
+            instrProxyPlac =
+                    new IfcLocalPlacement(instrProxyPlac.getPlacementRelTo(),
+                                          newLocalCoordSys);
+        }
+
         IfcProxy instrumentProxy =
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
+                        .objectPlacement(instrProxyPlac)
                         .representation(productDefinitionShape)
                         .proxyType(IfcObjectTypeEnum.PRODUCT).build();
         geometries.add(instrumentProxy);

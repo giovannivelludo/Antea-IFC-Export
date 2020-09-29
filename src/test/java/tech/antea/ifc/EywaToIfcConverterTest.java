@@ -34,7 +34,8 @@ import java.util.stream.IntStream;
  * Parametrized} test: the method annotated {@code @Parameters} creates an
  * {@code Iterable} of {@code Pair}s of {@code URL}s. This test gets
  * instantiated once for every pair of URLs using the constructor {@link
- * LoadEywaTest#LoadEywaTest(Pair)} that is provided by the {@code
+ * EywaToIfcConverterTest#EywaToIfcConverterTest(Pair)} (Pair)} that is provided
+ * by the {@code
  *
  * @RequiredArgsConstructor} annotation. Then, the {@code @Test} methods are
  * executed.</p>
@@ -44,7 +45,7 @@ import java.util.stream.IntStream;
  */
 @RequiredArgsConstructor
 @RunWith(value = Parameterized.class)
-public class LoadEywaTest {
+public class EywaToIfcConverterTest {
     public static final String PACKAGE = "tech.antea";
     private static final String EYWA_EXTENSION = "eywa";
     private static final String IFC_EXTENSION = "ifc";
