@@ -52,7 +52,7 @@ public class EywaToIfcConverter implements EywaConverter {
      * to the world coordinate system, otherwise it will be relative to the
      * position of the IfcProduct representing their parent in the Eywa tree.
      */
-    private static final boolean USE_ABSOLUTE_POSITIONS = false;
+    private static final boolean USE_ABSOLUTE_PLACEMENTS = false;
     /**
      * Number of points used to draw circles in
      * {@link #addObject(EccentricCone)}.
@@ -670,7 +670,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     private IfcLocalPlacement resolveLocation(@NonNull Primitive obj) {
         IfcAxis2Placement3D parentPosition;
-        if (USE_ABSOLUTE_POSITIONS) {
+        if (USE_ABSOLUTE_PLACEMENTS) {
             parentPosition =
                     (IfcAxis2Placement3D) objPositions.get(obj.getParent())
                             .getRelativePlacement();
@@ -757,7 +757,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                             new IfcDirection(axis),
                                             new IfcDirection(refDir));
         }
-        IfcLocalPlacement objPlacement = USE_ABSOLUTE_POSITIONS ?
+        IfcLocalPlacement objPlacement = USE_ABSOLUTE_PLACEMENTS ?
                 new IfcLocalPlacement(null, objPosition) :
                 new IfcLocalPlacement(objPositions.get(obj.getParent()),
                                       objPosition);
@@ -892,15 +892,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 beam);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy beamProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcMember beamProduct =
+                IfcMember.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
+                        .objectType(new IfcLabel("member"))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(beamProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(beamProduct);
     }
 
     /**
@@ -967,15 +967,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 blindItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy blindProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcDistributionFlowElement blindProduct =
+                IfcDistributionFlowElement.builder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(location)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(blindProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(blindProduct);
     }
 
     /**
@@ -1011,14 +1011,12 @@ public class EywaToIfcConverter implements EywaConverter {
                 box);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy boxProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        IfcBuildingElementProxy boxProxy = IfcBuildingElementProxy.builder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
         geometries.add(boxProxy);
     }
 
@@ -1056,15 +1054,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 collar);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy collarProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcMember collarProduct =
+                IfcMember.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
+                        .objectType(new IfcLabel("collar"))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(collarProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(collarProduct);
     }
 
     /**
@@ -1112,15 +1110,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 curve);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy curveProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(curveProxy);
+        IfcFlowFitting curveProduct = IfcFlowFitting.flowFittingBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(curveProduct);
     }
 
     /**
@@ -1155,15 +1151,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 dielectric);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy dielectricProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(dielectricProxy);
+        IfcFlowSegment dielectricProduct = IfcFlowSegment.flowSegmentBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(dielectricProduct);
     }
 
     /**
@@ -1242,15 +1236,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 buildExpansionJoint(obj.getRadius(),
                                     obj.getLength(),
                                     obj.getThickness());
-        IfcProxy expansionJointProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowSegment expansionJointProduct =
+                IfcFlowSegment.flowSegmentBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(expansionJoint)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(expansionJointProxy);
+                        .representation(expansionJoint).build();
+        geometries.add(expansionJointProduct);
     }
 
     /**
@@ -1290,15 +1284,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 eccentricCone);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy eccentricConeProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowSegment eccentricConeProduct =
+                IfcFlowSegment.flowSegmentBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(eccentricConeProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(eccentricConeProduct);
     }
 
     /**
@@ -1469,15 +1463,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 endplate);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy endplateProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcDistributionFlowElement endplateProduct =
+                IfcDistributionFlowElement.builder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(objectPlacement)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(endplateProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(endplateProduct);
     }
 
     /**
@@ -1493,14 +1487,12 @@ public class EywaToIfcConverter implements EywaConverter {
                 buildExpansionJoint(obj.getRadius(),
                                     obj.getLength(),
                                     obj.getThickness());
-        IfcProxy expansionJointProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(expansionJoint)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
+        IfcFlowSegment expansionJointProxy = IfcFlowSegment.flowSegmentBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(expansionJoint).build();
         geometries.add(expansionJointProxy);
     }
 
@@ -1612,15 +1604,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 valveItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy valveProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController valveProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(valveProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(valveProduct);
     }
 
     /**
@@ -1719,15 +1711,15 @@ public class EywaToIfcConverter implements EywaConverter {
                                           newLocalCoordSys);
         }
 
-        IfcProxy instrumentProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcDistributionControlElement instrumentProduct =
+                IfcDistributionControlElement.builder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(instrProxyPlac)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(instrumentProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(instrumentProduct);
     }
 
     /**
@@ -1798,6 +1790,7 @@ public class EywaToIfcConverter implements EywaConverter {
         String name = obj.getRepresenting() == null ||
                 obj.getRepresenting().equals("") ?
                 obj.getClass().getSimpleName() : obj.getRepresenting();
+        // TODO: use appropriate IfcProduct according to getRepresenting
         IfcProxy meshProxy =
                 IfcProxy.builder().globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory).name(new IfcLabel(name))
@@ -1959,15 +1952,15 @@ public class EywaToIfcConverter implements EywaConverter {
             length += obj.getCrownThickness() + raisedFaceLength;
             objectPlacement = flip(objectPlacement, length);
         }
-        IfcProxy nozzleProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController nozzleProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(objectPlacement)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(nozzleProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(nozzleProduct);
     }
 
     /**
@@ -2010,15 +2003,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 valveBuilder.build());
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy valveProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController valveProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(valveProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(valveProduct);
     }
 
     /**
@@ -2079,15 +2072,15 @@ public class EywaToIfcConverter implements EywaConverter {
         if (obj.isSwitched()) {
             location = flip(location, blindThickness + plateThickness);
         }
-        IfcProxy rectBlind =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcDistributionFlowElement rectBlindProduct =
+                IfcDistributionFlowElement.builder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(location)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(rectBlind);
+                        .representation(productDefinitionShape).build();
+        geometries.add(rectBlindProduct);
     }
 
     /**
@@ -2163,15 +2156,15 @@ public class EywaToIfcConverter implements EywaConverter {
         if (obj.isSwitched()) {
             location = flip(location, length);
         }
-        IfcProxy rectEndplate =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcDistributionFlowElement rectEndplateProduct =
+                IfcDistributionFlowElement.builder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(location)
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(rectEndplate);
+                        .representation(productDefinitionShape).build();
+        geometries.add(rectEndplateProduct);
     }
 
     /**
@@ -2260,15 +2253,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 flangeItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy rectFlange =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController rectFlangeProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(rectFlange);
+                        .representation(productDefinitionShape).build();
+        geometries.add(rectFlangeProduct);
     }
 
     /**
@@ -2323,15 +2316,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 plate);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy rectPlate =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(rectPlate);
+        IfcFlowFitting rectPlateProduct = IfcFlowFitting.flowFittingBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(rectPlateProduct);
     }
 
     /**
@@ -2370,15 +2361,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 rectShell);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy rectShellProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(rectShellProxy);
+        IfcFlowSegment rectShellProduct = IfcFlowSegment.flowSegmentBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(rectShellProduct);
     }
 
     /**
@@ -2416,15 +2405,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 ring);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy ringProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(ringProxy);
+        IfcFlowFitting ringProduct = IfcFlowFitting.flowFittingBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(ringProduct);
     }
 
     /**
@@ -2480,15 +2467,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 shell);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy shellProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(shellProxy);
+        IfcFlowSegment shellProduct = IfcFlowSegment.flowSegmentBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(shellProduct);
     }
 
     /**
@@ -2646,15 +2631,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 tankShell);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy tankShellProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowStorageDevice tankShellProduct =
+                IfcFlowStorageDevice.flowStorageDeviceBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(tankShellProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(tankShellProduct);
     }
 
     /**
@@ -2781,15 +2766,13 @@ public class EywaToIfcConverter implements EywaConverter {
                 derivationPipe);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy teeProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
-                        .ownerHistory(ownerHistory)
-                        .name(new IfcLabel(obj.getClass().getSimpleName()))
-                        .description(new IfcText(getDescription(obj)))
-                        .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(teeProxy);
+        IfcFlowFitting teeProduct = IfcFlowFitting.flowFittingBuilder()
+                .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
+                .name(new IfcLabel(obj.getClass().getSimpleName()))
+                .description(new IfcText(getDescription(obj)))
+                .objectPlacement(resolveLocation(obj))
+                .representation(productDefinitionShape).build();
+        geometries.add(teeProduct);
     }
 
     /**
@@ -2833,15 +2816,15 @@ public class EywaToIfcConverter implements EywaConverter {
                 valveItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy valveProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController valveProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(valveProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(valveProduct);
     }
 
     /**
@@ -2883,14 +2866,14 @@ public class EywaToIfcConverter implements EywaConverter {
                 valveBuilder.build());
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
-        IfcProxy valveProxy =
-                IfcProxy.builder().globalId(new IfcGloballyUniqueId())
+        IfcFlowController valveProduct =
+                IfcFlowController.flowControllerBuilder()
+                        .globalId(new IfcGloballyUniqueId())
                         .ownerHistory(ownerHistory)
                         .name(new IfcLabel(obj.getClass().getSimpleName()))
                         .description(new IfcText(getDescription(obj)))
                         .objectPlacement(resolveLocation(obj))
-                        .representation(productDefinitionShape)
-                        .proxyType(IfcObjectTypeEnum.PRODUCT).build();
-        geometries.add(valveProxy);
+                        .representation(productDefinitionShape).build();
+        geometries.add(valveProduct);
     }
 }
