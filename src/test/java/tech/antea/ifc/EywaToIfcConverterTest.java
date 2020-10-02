@@ -1,7 +1,6 @@
 package tech.antea.ifc;
 
 import buildingsmart.ifc.IfcProject;
-import buildingsmart.ifc.IfcRoot;
 import buildingsmart.util.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.classgraph.ClassGraph;
@@ -14,17 +13,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.reflections.Reflections;
 
 import java.io.IOException;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -46,7 +42,8 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 @RunWith(value = Parameterized.class)
 public class EywaToIfcConverterTest {
-    public static final String PACKAGE = "tech.antea";
+    public static final String RESOURCES_PACKAGE = "tech.antea";
+    private static final String IFC_PACKAGE = "buildingsmart.ifc";
     private static final String EYWA_EXTENSION = "eywa";
     private static final String IFC_EXTENSION = "ifc";
     private static final char S = java.io.File.separatorChar;
@@ -60,14 +57,15 @@ public class EywaToIfcConverterTest {
     private static final String[] ifcRootSubclassesRegex;
 
     static {
-        Reflections reflections = new Reflections("buildingsmart.ifc");
-        Set<Class<? extends IfcRoot>> subTypes =
-                reflections.getSubTypesOf(IfcRoot.class);
-        ifcRootSubclassesRegex = subTypes.stream()
-                .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
-                .map(clazz -> "^#[0-9]+=" +
-                        clazz.getSimpleName().toUpperCase() + "\\(.*")
-                .toArray(String[]::new);
+        try (ScanResult scanResult = new ClassGraph().enableClassInfo()
+                .whitelistPackages(IFC_PACKAGE).scan()) {
+            ifcRootSubclassesRegex =
+                    scanResult.getSubclasses(IFC_PACKAGE + ".IfcRoot")
+                            .filter(classInfo -> !classInfo.isAbstract())
+                            .stream().map(classInfo -> "^#[0-9]+=" +
+                            classInfo.getSimpleName().toUpperCase() + "\\(.*")
+                            .toArray(String[]::new);
+        }
     }
 
     private final Pair<URL, URL> inputAndExpectedOutput;
@@ -81,19 +79,19 @@ public class EywaToIfcConverterTest {
      */
     @Parameters(name = "{0}")
     public static Iterable<Pair<URL, URL>> data() {
-        ScanResult r = new ClassGraph()
+        try (ScanResult r = new ClassGraph()
                 .enableStaticFinalFieldConstantInitializerValues()
-                .enableAllInfo().whitelistPackages(PACKAGE).scan();
-        List<URL> eywaUrls =
-                r.getResourcesWithExtension(EYWA_EXTENSION).getURLs();
-        List<URL> expectedIfcUrls =
-                r.getResourcesWithExtension(IFC_EXTENSION).getURLs();
-        r.close();
-        eywaUrls.sort(Comparator.comparing(URL::getFile));
-        expectedIfcUrls.sort(Comparator.comparing(URL::getFile));
-        return IntStream.range(0, eywaUrls.size()).mapToObj(i -> new Pair<>(
-                eywaUrls.get(i),
-                expectedIfcUrls.get(i))).collect(Collectors.toList());
+                .enableAllInfo().whitelistPackages(RESOURCES_PACKAGE).scan()) {
+            List<URL> eywaUrls =
+                    r.getResourcesWithExtension(EYWA_EXTENSION).getURLs();
+            List<URL> expectedIfcUrls =
+                    r.getResourcesWithExtension(IFC_EXTENSION).getURLs();
+            eywaUrls.sort(Comparator.comparing(URL::getFile));
+            expectedIfcUrls.sort(Comparator.comparing(URL::getFile));
+            return IntStream.range(0, eywaUrls.size()).mapToObj(i -> new Pair<>(
+                    eywaUrls.get(i),
+                    expectedIfcUrls.get(i))).collect(Collectors.toList());
+        }
     }
 
     /**
@@ -132,6 +130,7 @@ public class EywaToIfcConverterTest {
      *
      * @param strings The input List of Strings.
      * @return A copy of {@code strings} without non-deterministic substrings.
+     * @throws NullPointerException If {@code strings} is {@code null}.
      */
     private static List<String> removeNonDeterministicOutput(@NonNull List<String> strings) {
         return strings.parallelStream().map(s -> {

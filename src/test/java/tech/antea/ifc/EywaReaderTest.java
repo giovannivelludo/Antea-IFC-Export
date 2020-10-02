@@ -58,7 +58,7 @@ public class EywaReaderTest {
     public void convert() throws IOException {
         ScanResult r = new ClassGraph()
                 .enableStaticFinalFieldConstantInitializerValues()
-                .enableAllInfo().whitelistPackages(EywaToIfcConverterTest.PACKAGE).scan();
+                .enableAllInfo().whitelistPackages(EywaToIfcConverterTest.RESOURCES_PACKAGE).scan();
         URL file =
                 r.getResourcesWithLeafName("051200TA001.eywa").getURLs().get(0);
         ObjectMapper objectMapper = new ObjectMapper();
