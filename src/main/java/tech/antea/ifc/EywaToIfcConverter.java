@@ -277,15 +277,15 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
-     * Useful for Eywa Primitives having a "switched" field. This method
-     * modifies the relativePlacement of the corresponding IfcProduct so that it
-     * will be upside-down. {@code unflipped} won't be modified.
+     * Useful for Eywa Primitives having a "switched" field. This method creates
+     * a new IfcLocalPlacement for the corresponding IfcProduct so that it will
+     * be upside-down. {@code unflipped} won't be modified.
      *
-     * @param unflipped {@code IfcProduct.ObjectPlacement.RelativePlacement} of
-     *                  the IfcProduct to flip.
+     * @param unflipped {@code IfcProduct.ObjectPlacement} of the IfcProduct to
+     *                  flip.
      * @param length    The length of the object measured along its z axis
-     *                  (which corresponds to the y axis in the Eywa
-     *                  specification).
+     *                  (which corresponds to the y axis in the Eywa coordinate
+     *                  system).
      * @return The placement of the flipped object.
      *
      * @throws NullPointerException If unflipped is null.
@@ -328,30 +328,33 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * Rotates the given vector.
      *
-     * @param vector    The vector to rotate.
+     * @param vector    The vector to rotate. It must use the Eywa coordinate
+     *                  system and have the x, y, z and w components.
      * @param rotations Euler angles in radians describing the 3 rotations.
      * @param order     Indicates on what axis each rotation must be applied,
      *                  for example {@code "XYZ"} indicates that the first
      *                  rotation should be done around the X axis, the second
      *                  one on the Y axis, and the third one on the Z axis.
      * @throws NullPointerException     If any of the arguments are null.
-     * @throws IllegalArgumentException If any of the arguments have length !=
-     *                                  3, if order contains any characters
-     *                                  other than 'X', 'Y' and 'Z'.
+     * @throws IllegalArgumentException If {@code vector}'s length is not 4, if
+     *                                  {@code rotations}'s or {@code order}'s
+     *                                  length is not 3, if order contains any
+     *                                  characters other than 'X', 'Y' and 'Z'.
      */
     private static void rotate(@NonNull double[] vector,
-                               @NonNull double[] rotations,
+                               @NonNull Double[] rotations,
                                @NonNull String order) {
-        if (vector.length != 3 || rotations.length != 3 ||
-                order.length() != 3) {
-            throw new IllegalArgumentException(
-                    "length of all arguments must be 3");
+        if (vector.length != 4) {
+            throw new IllegalArgumentException("length of vector must be 4");
+        } else if (rotations.length != 3) {
+            throw new IllegalArgumentException("length of rotation must be 3");
         }
-        if (!order.matches("[XYZ]{3}")) {
+        if (!order.matches("^[XYZ]{3}$")) {
             throw new IllegalArgumentException(
-                    "order can contain only the characters 'X', 'Y' and 'Z'");
+                    "order must be 3 characters long and can contain only the" +
+                            " characters 'X', 'Y' and 'Z'");
         }
-        double[] oldVector = new double[3];
+        double[] oldVector = new double[vector.length];
         for (byte i = 0; i < order.length(); i++) {
             double ang = rotations[i];
             System.arraycopy(vector, 0, oldVector, 0, vector.length);
@@ -553,6 +556,60 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * Translates a vector in the IFC coordinate system to the equivalent vector
+     * in the Eywa coordinate system, as axes x, y and z in IFC correspond to
+     * axes z, x and y in Eywa.
+     *
+     * @param vector     The vector in the IFC coordinate system.
+     * @param isPosition {@code true} if the vector is a position in space,
+     *                   {@code false} if it's a direction.
+     * @return An array of 4 elements containing the components of the vector in
+     * the Eywa coordinate system.
+     *
+     * @throws NullPointerException     If {@code vector} is {@code null}.
+     * @throws IllegalArgumentException If length of {@code vector} is not 3.
+     */
+    private static double[] ifcToEywaVector(@NonNull double[] vector,
+                                            boolean isPosition) {
+        if (vector.length != 3) {
+            throw new IllegalArgumentException(
+                    "length of vector must be 3, as it needs to have the x, y" +
+                            " and z components");
+        }
+        double[] result = new double[4];
+        result[0] = vector[1];
+        result[1] = vector[2];
+        result[2] = vector[0];
+        result[3] = isPosition ? 1 : 0;
+        return result;
+    }
+
+    /**
+     * Translates a vector in the Eywa coordinate system to the equivalent
+     * vector in the IFC coordinate system, as axes x, y and z in Eywa
+     * correspond to axes y, z and x in IFC.
+     *
+     * @param vector The vector in the Eywa coordinate system.
+     * @return An array of 3 elements containing the components of the vector in
+     * the IFC coordinate system.
+     *
+     * @throws NullPointerException     If {@code vector} is {@code null}.
+     * @throws IllegalArgumentException If length of {@code vector} is not 4.
+     */
+    private static double[] eywaToIfcVector(@NonNull double[] vector) {
+        if (vector.length != 4) {
+            throw new IllegalArgumentException(
+                    "length of vector must be 4 as it needs to have the x, y," +
+                            " z and w components");
+        }
+        double[] result = new double[3];
+        result[0] = vector[2];
+        result[1] = vector[0];
+        result[2] = vector[1];
+        return result;
+    }
+
+    /**
      * Initializes {@code this.ownerHistory}. This field will be needed when
      * creating the IfcProducts that represent instances of Eywa Primitives.
      */
@@ -687,34 +744,35 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcAxis2Placement3D objPosition;
         if (obj.getMatrix() != null) {
             Double[] matrix = obj.getMatrix();
-            double[] location = new double[4];
-            double[] axis = new double[4];
-            double[] refDir = new double[4];
-            List<IfcLengthMeasure> locationCoordinates =
-                    parentPosition.getLocation().getCoordinates();
-            List<IfcReal> axisCoordinates =
-                    parentPosition.getP().get(2).getDirectionRatios(); // z axis
-            List<IfcReal> refDirectionCoordinates =
-                    parentPosition.getP().get(0).getDirectionRatios(); // x axis
-            for (int i = 0; i < locationCoordinates.size(); i++) {
-                location[i] = locationCoordinates.get(i).getValue();
-                axis[i] = axisCoordinates.get(i).getValue();
-                refDir[i] = refDirectionCoordinates.get(i).getValue();
-            }
-            location[3] = 1; // indicates that location is a position
-            axis[3] = 0;
-            refDir[3] = 0; // axis and refDir are directions
 
-            double[] newLocation = new double[3];
-            double[] newAxis = new double[3];
-            double[] newRefDir = new double[3];
-            System.arraycopy(multiply(matrix, location), 0, newLocation, 0, 3);
-            System.arraycopy(multiply(matrix, axis), 0, newAxis, 0, 3);
-            System.arraycopy(multiply(matrix, refDir), 0, newRefDir, 0, 3);
+            double[] eywaParentLocation =
+                    ifcToEywaVector(parentPosition.getLocation()
+                                            .getCoordinates().stream()
+                                            .mapToDouble(IfcLengthMeasure::getValue)
+                                            .toArray(), true);
+            double[] eywaParentAxis =
+                    ifcToEywaVector(parentPosition.getP().get(2)
+                                            .getDirectionRatios().stream()
+                                            .mapToDouble(IfcReal::getValue)
+                                            .toArray(), false);
+            double[] eywaParentRefDir =
+                    ifcToEywaVector(parentPosition.getP().get(0)
+                                            .getDirectionRatios().stream()
+                                            .mapToDouble(IfcReal::getValue)
+                                            .toArray(), false);
+
+            double[] eywaLocation = multiply(matrix, eywaParentLocation);
+            double[] eywaAxis = multiply(matrix, eywaParentAxis);
+            double[] eywaRefDir = multiply(matrix, eywaParentRefDir);
+
+            double[] location = eywaToIfcVector(eywaLocation);
+            double[] axis = eywaToIfcVector(eywaAxis);
+            double[] refDir = eywaToIfcVector(eywaRefDir);
+
             objPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(newLocation),
-                                            new IfcDirection(newAxis),
-                                            new IfcDirection(newRefDir));
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(location),
+                                            new IfcDirection(axis),
+                                            new IfcDirection(refDir));
         } else if (obj.getPosition() == null && obj.getRotation() == null) {
             objPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
@@ -722,37 +780,42 @@ public class EywaToIfcConverter implements EywaConverter {
                                             new IfcDirection(1, 0, 0));
         } else {
             // using position and rotation
-            double[] location = new double[3];
-            double[] axis = new double[3];
-            double[] refDir = new double[3];
-            List<IfcLengthMeasure> locationCoordinates =
-                    parentPosition.getLocation().getCoordinates();
-            List<IfcReal> axisCoordinates =
-                    parentPosition.getP().get(2).getDirectionRatios(); // z axis
-            List<IfcReal> refDirectionCoordinates =
-                    parentPosition.getP().get(0).getDirectionRatios(); // x axis
-            for (int i = 0; i < locationCoordinates.size(); i++) {
-                location[i] = locationCoordinates.get(i).getValue();
-                axis[i] = axisCoordinates.get(i).getValue();
-                refDir[i] = refDirectionCoordinates.get(i).getValue();
-            }
+            double[] eywaParentLocation =
+                    ifcToEywaVector(parentPosition.getLocation()
+                                            .getCoordinates().stream()
+                                            .mapToDouble(IfcLengthMeasure::getValue)
+                                            .toArray(), true);
+            double[] eywaParentAxis =
+                    ifcToEywaVector(parentPosition.getP().get(2)
+                                            .getDirectionRatios().stream()
+                                            .mapToDouble(IfcReal::getValue)
+                                            .toArray(), false);
+            double[] eywaParentRefDir =
+                    ifcToEywaVector(parentPosition.getP().get(0)
+                                            .getDirectionRatios().stream()
+                                            .mapToDouble(IfcReal::getValue)
+                                            .toArray(), false);
 
             Double[] position =
                     obj.getPosition() == null ? new Double[]{0d, 0d, 0d} :
                             obj.getPosition();
-            double[] rotationAngles =
-                    obj.getRotationArray() == null ? new double[]{0, 0, 0} :
-                            Arrays.stream(obj.getRotationArray())
-                                    .mapToDouble(Double::doubleValue).toArray();
+            eywaParentLocation[0] = eywaParentLocation[0] + position[0];
+            eywaParentLocation[1] = eywaParentLocation[1] + position[1];
+            eywaParentLocation[2] = eywaParentLocation[2] + position[2];
+
+            Double[] rotationAngles =
+                    obj.getRotationArray() == null ? new Double[]{0d, 0d, 0d} :
+                            obj.getRotationArray();
             String rotationOrder = obj.getRotationAxis() == null ||
                     obj.getRotationAxis().equals("") ? "XYZ" :
                     obj.getRotationAxis();
 
-            location[0] = location[0] + position[0];
-            location[1] = location[1] + position[1];
-            location[2] = location[2] + position[2];
-            rotate(axis, rotationAngles, rotationOrder);
-            rotate(refDir, rotationAngles, rotationOrder);
+            rotate(eywaParentAxis, rotationAngles, rotationOrder);
+            rotate(eywaParentRefDir, rotationAngles, rotationOrder);
+
+            double[] location = eywaToIfcVector(eywaParentLocation);
+            double[] axis = eywaToIfcVector(eywaParentAxis);
+            double[] refDir = eywaToIfcVector(eywaParentRefDir);
 
             objPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(location),
@@ -1189,13 +1252,13 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                        PI));
 
         IfcCartesianPoint cuttingPlaneLocation =
-                new IfcCartesianPoint(obj.getDirection()[0] * obj.getDistance(),
-                                      obj.getDirection()[1] * obj.getDistance(),
-                                      obj.getDirection()[2] *
+                new IfcCartesianPoint(obj.getDirection()[2] * obj.getDistance(),
+                                      obj.getDirection()[0] * obj.getDistance(),
+                                      obj.getDirection()[1] *
                                               obj.getDistance());
-        IfcDirection planeNormal = new IfcDirection(obj.getDirection()[0],
-                                                    obj.getDirection()[1],
-                                                    obj.getDirection()[2]);
+        IfcDirection planeNormal = new IfcDirection(obj.getDirection()[2],
+                                                    obj.getDirection()[0],
+                                                    obj.getDirection()[1]);
         IfcPlane cuttingPlane = new IfcPlane(new IfcAxis2Placement3D(
                 cuttingPlaneLocation,
                 planeNormal,
@@ -1511,9 +1574,9 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcCartesianPoint[obj.getVertices().length / 3];
         IntStream.range(0, vertices.length).forEach(i -> {
             int offset = i * 3;
-            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset],
-                                                obj.getVertices()[offset + 1],
-                                                obj.getVertices()[offset + 2]);
+            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset + 2],
+                                                obj.getVertices()[offset],
+                                                obj.getVertices()[offset + 1]);
         });
 
         Set<IfcFace> faces = new HashSet<>();
@@ -1683,23 +1746,27 @@ public class EywaToIfcConverter implements EywaConverter {
                                new Double[]{0d, 0d, 0d}) &&
                 !Arrays.equals(obj.getRotationArray(),
                                new Double[]{-0d, -0d, -0d})) {
-            double[] rotationAngles = Arrays.stream(obj.getRotationArray())
-                    .mapToDouble(Double::doubleValue).toArray();
+
             IfcAxis2Placement3D localCoordSys =
                     (IfcAxis2Placement3D) instrProxyPlac.getRelativePlacement();
 
             // rotating axis and refDirection of the Instrument's coordinate
             // system
-            double[] axisCoords =
-                    localCoordSys.getAxis().getNormalisedDirectionRatios()
-                            .stream().mapToDouble(IfcReal::getValue).toArray();
-            double[] refDirCoords = localCoordSys.getRefDirection()
-                    .getNormalisedDirectionRatios().stream()
-                    .mapToDouble(IfcReal::getValue).toArray();
-            rotate(axisCoords, rotationAngles, "XYZ");
-            rotate(refDirCoords, rotationAngles, "XYZ");
-            IfcDirection rotatedAxis = new IfcDirection(axisCoords);
-            IfcDirection rotatedRefDir = new IfcDirection(refDirCoords);
+            double[] axis = ifcToEywaVector(localCoordSys.getAxis()
+                                                    .getNormalisedDirectionRatios()
+                                                    .stream()
+                                                    .mapToDouble(IfcReal::getValue)
+                                                    .toArray(), false);
+            double[] refDir = ifcToEywaVector(localCoordSys.getRefDirection()
+                                                      .getNormalisedDirectionRatios()
+                                                      .stream()
+                                                      .mapToDouble(IfcReal::getValue)
+                                                      .toArray(), false);
+            rotate(axis, obj.getRotationArray(), "XYZ");
+            rotate(refDir, obj.getRotationArray(), "XYZ");
+            IfcDirection rotatedAxis = new IfcDirection(eywaToIfcVector(axis));
+            IfcDirection rotatedRefDir =
+                    new IfcDirection(eywaToIfcVector(refDir));
 
             // this doesn't modify the IfcAxis2Placement3D associated to obj
             // in objPositions, which must not be modified because it's used to
@@ -1752,9 +1819,9 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcCartesianPoint[obj.getVertices().length / 3];
         IntStream.range(0, vertices.length).forEach(i -> {
             int offset = i * 3;
-            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset],
-                                                obj.getVertices()[offset + 1],
-                                                obj.getVertices()[offset + 2]);
+            vertices[i] = new IfcCartesianPoint(obj.getVertices()[offset + 2],
+                                                obj.getVertices()[offset],
+                                                obj.getVertices()[offset + 1]);
         });
 
         Set<IfcFace> faces = new HashSet<>();
