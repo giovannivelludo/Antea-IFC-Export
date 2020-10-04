@@ -133,6 +133,7 @@ public class EywaReader {
                     "can't convert an EywaRoot with no object");
         }
         builderMethod.get(rootObject.getClass()).accept(rootObject);
+        rootObject.prePersist();
         addChildren(rootObject);
     }
 
@@ -143,9 +144,11 @@ public class EywaReader {
      * @throws ConversionException  If an error occurs during conversion.
      */
     private void addChildren(@NonNull Primitive obj) {
-        obj.getChildren().forEach(child -> builderMethod.get(child.getClass())
-                .accept(child));
-        obj.getChildren().forEach(this::addChildren);
+        obj.getChildren().forEach(child -> {
+            builderMethod.get(child.getClass()).accept(child);
+            child.prePersist();
+            addChildren(child);
+        });
     }
 
     /**

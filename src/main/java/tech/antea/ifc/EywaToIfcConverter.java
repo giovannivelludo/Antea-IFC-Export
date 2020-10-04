@@ -671,12 +671,14 @@ public class EywaToIfcConverter implements EywaConverter {
     private IfcLocalPlacement resolveLocation(@NonNull Primitive obj) {
         IfcAxis2Placement3D parentPosition;
         if (USE_ABSOLUTE_PLACEMENTS) {
-            parentPosition =
-                    (IfcAxis2Placement3D) objPositions.get(obj.getParent())
-                            .getRelativePlacement();
-            if (parentPosition == null) {
+            IfcLocalPlacement parentPlacement =
+                    objPositions.get(obj.getParent());
+            if (parentPlacement == null) {
                 // obj is the root object
                 parentPosition = new IfcAxis2Placement3D(0, 0, 0);
+            } else {
+                parentPosition = (IfcAxis2Placement3D) parentPlacement
+                        .getRelativePlacement();
             }
         } else {
             parentPosition = new IfcAxis2Placement3D(0, 0, 0);
