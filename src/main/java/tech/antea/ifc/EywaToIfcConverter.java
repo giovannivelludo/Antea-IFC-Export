@@ -392,65 +392,6 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
-     * @param angles  The array containing the angles (in radians) at which
-     *                points composing the two circles should be drawn.
-     * @param radius1 The radius of the bottom circle.
-     * @param radius2 The radius of the top circle.
-     * @param length  The length of the eccentric cone.
-     * @return An IfcFacetedBrep representing an eccentric cone (without any
-     * internal voids).
-     *
-     * @throws NullPointerException     If {@code angles} is {@code null}.
-     * @throws IllegalArgumentException If {@code angles} contains less than 3
-     *                                  elements.
-     */
-    private static IfcFacetedBrep buildEccentricCone(@NonNull double[] angles,
-                                                     double radius1,
-                                                     double radius2,
-                                                     double length) {
-        if (angles.length < 3) {
-            throw new IllegalArgumentException(
-                    "angles must contain at least 3 elements");
-        }
-        IfcCartesianPoint[] outerBottomCircle = Arrays.stream(angles)
-                .mapToObj(angle -> new IfcCartesianPoint(cos(angle) * radius1,
-                                                         sin(angle) * radius1,
-                                                         0))
-                .toArray(IfcCartesianPoint[]::new);
-        double radiusDifference = radius1 - radius2;
-        IfcCartesianPoint[] outerTopCircle = Arrays.stream(angles)
-                .mapToObj(angle -> new IfcCartesianPoint(cos(angle) * radius2,
-                                                         sin(angle) * radius2 +
-                                                                 radiusDifference,
-                                                         length))
-                .toArray(IfcCartesianPoint[]::new);
-
-        Set<IfcFace> faces = new HashSet<>(3 + angles.length, 1);
-        IfcPolyLoop bottomBase = new IfcPolyLoop(outerBottomCircle);
-        IfcPolyLoop topBase = new IfcPolyLoop(outerTopCircle);
-        faces.add(new IfcFace(new IfcFaceBound(bottomBase, IfcBoolean.T)));
-        faces.add(new IfcFace(new IfcFaceBound(topBase, IfcBoolean.T)));
-
-        // adding side faces of the cone
-        IntStream.range(0, outerBottomCircle.length - 1)
-                .mapToObj(i -> new IfcPolyLoop(outerBottomCircle[i],
-                                               outerBottomCircle[i + 1],
-                                               outerTopCircle[i + 1],
-                                               outerTopCircle[i]))
-                .map(polygon -> new IfcFace(new IfcFaceBound(polygon,
-                                                             IfcBoolean.T)))
-                .forEach(faces::add);
-        // last face
-        int lastPoint = outerBottomCircle.length - 1;
-        IfcPolyLoop lastFace = new IfcPolyLoop(outerBottomCircle[lastPoint],
-                                               outerTopCircle[lastPoint],
-                                               outerTopCircle[0],
-                                               outerBottomCircle[0]);
-        faces.add(new IfcFace(new IfcFaceBound(lastFace, IfcBoolean.T)));
-        return new IfcFacetedBrep(new IfcClosedShell(faces));
-    }
-
-    /**
      * Method used to convert both {@link ExpansionJoint} and {@link
      * DualExpansionJoint}, since they represent the same geometry.
      *
@@ -1327,26 +1268,90 @@ public class EywaToIfcConverter implements EywaConverter {
                 IntStream.range(0, RADIAL_SEGMENTS).mapToDouble(i -> i * slice)
                         .toArray();
 
-        IfcFacetedBrep outerCone = buildEccentricCone(angles,
-                                                      obj.getRadius1(),
-                                                      obj.getRadius2(),
-                                                      obj.getLength());
         double innerRadius1 = obj.getRadius1() - getSafeThickness(obj);
         double innerRadius2 = obj.getRadius2() - getSafeThickness(obj);
-        IfcFacetedBrep innerCone = buildEccentricCone(angles,
-                                                      innerRadius1,
-                                                      innerRadius2,
-                                                      obj.getLength());
-        IfcBooleanResult eccentricCone =
-                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                     outerCone,
-                                     innerCone);
+        double outerRadiusDifference = obj.getRadius1() - obj.getRadius2();
+        double innerRadiusDifference = innerRadius1 - innerRadius2;
+
+        IfcCartesianPoint[] outerCircle1 = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(
+                        cos(angle) * obj.getRadius1(),
+                        sin(angle) * obj.getRadius1(),
+                        0)).toArray(IfcCartesianPoint[]::new);
+        IfcCartesianPoint[] innerCircle1 = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(
+                        cos(angle) * innerRadius1,
+                        sin(angle) * innerRadius1,
+                        0)).toArray(IfcCartesianPoint[]::new);
+        IfcCartesianPoint[] outerCircle2 = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(
+                        cos(angle) * obj.getRadius2(),
+                        sin(angle) * obj.getRadius2() + outerRadiusDifference,
+                        obj.getLength())).toArray(IfcCartesianPoint[]::new);
+        IfcCartesianPoint[] innerCircle2 = Arrays.stream(angles)
+                .mapToObj(angle -> new IfcCartesianPoint(
+                        cos(angle) * innerRadius2,
+                        sin(angle) * innerRadius2 + innerRadiusDifference,
+                        obj.getLength())).toArray(IfcCartesianPoint[]::new);
+
+        Set<IfcFace> faces = new HashSet<>(3 + angles.length, 1);
+
+        // creating the top and bottom bases
+        List<IfcCartesianPoint> bottomBase1 =
+                new ArrayList<>(angles.length + 2);
+        List<IfcCartesianPoint> bottomBase2 =
+                new ArrayList<>(angles.length + 2);
+        List<IfcCartesianPoint> topBase1 = new ArrayList<>(angles.length + 2);
+        List<IfcCartesianPoint> topBase2 = new ArrayList<>(angles.length + 2);
+        int halfPoints = angles.length / 2;
+        int i = 0;
+        while (i <= halfPoints) {
+            bottomBase1.add(innerCircle1[i]);
+            bottomBase2.add(innerCircle1[(i + halfPoints) % angles.length]);
+            topBase1.add(outerCircle2[i]);
+            topBase2.add(outerCircle2[(i + halfPoints) % angles.length]);
+            i++;
+        }
+        while (i >= 0) {
+            bottomBase1.add(outerCircle1[i]);
+            bottomBase2.add(outerCircle1[(i + halfPoints) % angles.length]);
+            topBase1.add(innerCircle2[i]);
+            topBase2.add(innerCircle2[(i + halfPoints) % angles.length]);
+            i--;
+        }
+        faces.add(new IfcFace(new IfcFaceBound(new IfcPolyLoop(bottomBase1),
+                                               IfcBoolean.T)));
+        faces.add(new IfcFace(new IfcFaceBound(new IfcPolyLoop(bottomBase2),
+                                               IfcBoolean.T)));
+        faces.add(new IfcFace(new IfcFaceBound(new IfcPolyLoop(topBase1),
+                                               IfcBoolean.T)));
+        faces.add(new IfcFace(new IfcFaceBound(new IfcPolyLoop(topBase2),
+                                               IfcBoolean.T)));
+
+        // adding outer side faces of the cone
+        IntStream.range(0, angles.length).mapToObj(j -> new IfcPolyLoop(
+                outerCircle1[j],
+                outerCircle1[(j + 1) % angles.length],
+                outerCircle2[(j + 1) % angles.length],
+                outerCircle2[j])).map(polygon -> new IfcFace(new IfcFaceBound(
+                polygon,
+                IfcBoolean.T))).forEach(faces::add);
+
+        // adding inner side faces of the cone
+        IntStream.range(1, angles.length + 1).mapToObj(j -> new IfcPolyLoop(
+                innerCircle1[j % angles.length],
+                innerCircle1[j - 1],
+                innerCircle2[j - 1],
+                innerCircle2[j % angles.length]))
+                .map(polygon -> new IfcFace(new IfcFaceBound(polygon,
+                                                             IfcBoolean.T)))
+                .forEach(faces::add);
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
-                eccentricCone);
+                new IfcLabel("Brep"),
+                new IfcFacetedBrep(new IfcClosedShell(faces)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcFlowSegment eccentricConeProduct =
@@ -1653,7 +1658,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
+                new IfcLabel("SweptSolid"),
                 valveItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
@@ -2048,7 +2053,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
+                new IfcLabel("SweptSolid"),
                 valveBuilder.build());
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
@@ -2851,7 +2856,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
+                new IfcLabel("SweptSolid"),
                 valveItems);
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
@@ -2894,7 +2899,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
-                new IfcLabel("CSG"),
+                new IfcLabel("SweptSolid"),
                 valveBuilder.build());
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);

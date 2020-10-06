@@ -84,29 +84,26 @@ class ValveBuilder {
     /**
      * Builds a valve output according to the given parameters.
      *
-     * @param position           0 indicates the bottom output, others follow
-     *                           anticlockwise.
-     * @param thickness          Thickness of the valve.
-     * @param radius             Radius of the output.
-     * @param length             Length of the output.
-     * @param crownRadius        Radius of the crown if the valve is flanged, 0
-     *                           otherwise.
-     * @param crownThickness     Thickness of the crown if the valve is flanged,
-     *                           0 otherwise.
-     * @param bottomOutputLength Length of the bottom output, needed to place
-     *                           other outputs correctly.
-     * @return The Set containing the IfcBooleanResult geometries composing the
-     * output.
+     * @param position       0 indicates the bottom output, others follow
+     *                       anticlockwise.
+     * @param radius         Radius of the output.
+     * @param length         Length of the output.
+     * @param crownRadius    Radius of the crown if the valve is flanged, 0
+     *                       otherwise.
+     * @param crownThickness Thickness of the crown if the valve is flanged, 0
+     *                       otherwise.
+     * @return The IfcRevolvedAreaSolid representing the output.
+     *
+     * @throws NullPointerException If {@link #addBottomOutput(double, double,
+     *                              double, double)} was not called before this
+     *                              method (because all kinds of valves have the
+     *                              bottom output).
      */
-    private static Set<IfcRepresentationItem> buildValveOutput(byte position,
-                                                               double thickness,
-                                                               double radius,
-                                                               double length,
-                                                               double crownRadius,
-                                                               double crownThickness,
-                                                               double bottomOutputLength) {
-        Set<IfcRepresentationItem> outputItems = new HashSet<>(3, 1);
-
+    private IfcRevolvedAreaSolid buildValveOutput(byte position,
+                                                  double radius,
+                                                  double length,
+                                                  double crownRadius,
+                                                  double crownThickness) {
         // placing the output according to position
         IfcCartesianPoint location;
         IfcDirection xAxis;
@@ -118,90 +115,57 @@ class ValveBuilder {
             zAxis = new IfcDirection(0, -1, 0);
         } else if (position == 1) {
             // right output
-            location = new IfcCartesianPoint(0, length, bottomOutputLength);
+            location = new IfcCartesianPoint(0, length, outputs[0].length);
             xAxis = new IfcDirection(1, 0, 0);
             zAxis = new IfcDirection(0, 0, -1);
         } else if (position == 2) {
             // top output
-            location = new IfcCartesianPoint(0, 0, length + bottomOutputLength);
+            location = new IfcCartesianPoint(0, 0, length + outputs[0].length);
             xAxis = new IfcDirection(1, 0, 0);
             zAxis = new IfcDirection(0, 1, 0);
         } else {
-            // left output, all axes are the default ones
-            location = new IfcCartesianPoint(0, -length, bottomOutputLength);
+            // left output, axes are the default ones
+            location = new IfcCartesianPoint(0, -length, outputs[0].length);
             xAxis = null;
             zAxis = null;
         }
+        IfcAxis2Placement3D outputPosition =
+                new IfcAxis2Placement3D(location, zAxis, xAxis);
         IfcAxis1Placement rotationAxis =
                 new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
                                       new IfcDirection(0, 1, 0));
-
-        IfcPolyline outerTriangle = new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                                    new IfcCartesianPoint(radius,
-                                                                          0),
-                                                    new IfcCartesianPoint(0,
-                                                                          length));
-        IfcArbitraryClosedProfileDef outerTriangleWrapper =
-                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
-                                                 null,
-                                                 outerTriangle);
-        IfcAxis2Placement3D conePosition =
-                new IfcAxis2Placement3D(location, zAxis, xAxis);
-        IfcRevolvedAreaSolid outerCone = new IfcRevolvedAreaSolid(
-                outerTriangleWrapper,
-                conePosition,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
         double innerRadius = radius - thickness;
-        IfcPolyline innerTriangle = new IfcPolyline(new IfcCartesianPoint(0, 0),
-                                                    new IfcCartesianPoint(
-                                                            innerRadius,
-                                                            0),
-                                                    new IfcCartesianPoint(0,
-                                                                          (length /
-                                                                                  radius) *
-                                                                                  innerRadius));
-        IfcArbitraryClosedProfileDef innerTriangleWrapper =
+        double innerLength = length * innerRadius / radius;
+        IfcPolyline outputRightSection;
+
+        if (crownRadius != 0 && crownThickness != 0) {
+            // if flanged
+            outputRightSection =
+                    new IfcPolyline(new IfcCartesianPoint(innerRadius, 0),
+                                    new IfcCartesianPoint(crownRadius, 0),
+                                    new IfcCartesianPoint(crownRadius,
+                                                          crownThickness),
+                                    new IfcCartesianPoint(
+                                            radius * (length - crownThickness) /
+                                                    length, crownThickness),
+                                    new IfcCartesianPoint(0, length),
+                                    new IfcCartesianPoint(0, innerLength));
+        } else {
+            outputRightSection =
+                    new IfcPolyline(new IfcCartesianPoint(innerRadius, 0),
+                                    new IfcCartesianPoint(radius, 0),
+                                    new IfcCartesianPoint(0, length),
+                                    new IfcCartesianPoint(0, innerLength));
+        }
+
+        IfcArbitraryClosedProfileDef outputRightSectionWrapper =
                 new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
                                                  null,
-                                                 innerTriangle);
-        IfcRevolvedAreaSolid innerCone = new IfcRevolvedAreaSolid(
-                innerTriangleWrapper,
-                conePosition,
-                rotationAxis,
-                new IfcPlaneAngleMeasure(2 * PI));
-
-        IfcBooleanResult output =
-                new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                     outerCone,
-                                     innerCone);
-        outputItems.add(output);
-
-        // if flanged
-        if (crownRadius != 0 && crownThickness != 0) {
-            IfcRectangleProfileDef revolvedRectangle =
-                    new IfcRectangleProfileDef(IfcProfileTypeEnum.AREA,
-                                               null,
-                                               new IfcAxis2Placement2D(
-                                                       crownRadius / 2,
-                                                       crownThickness / 2),
-                                               new IfcPositiveLengthMeasure(
-                                                       crownRadius),
-                                               new IfcPositiveLengthMeasure(
-                                                       crownThickness));
-            IfcRevolvedAreaSolid crown = new IfcRevolvedAreaSolid(
-                    revolvedRectangle,
-                    conePosition,
-                    rotationAxis,
-                    new IfcPlaneAngleMeasure(2 * PI));
-            IfcBooleanResult flange =
-                    new IfcBooleanResult(IfcBooleanOperator.DIFFERENCE,
-                                         crown,
-                                         outerCone);
-            outputItems.add(flange);
-        }
-        return outputItems;
+                                                 outputRightSection);
+        return new IfcRevolvedAreaSolid(outputRightSectionWrapper,
+                                        outputPosition,
+                                        rotationAxis,
+                                        new IfcPlaneAngleMeasure(2 * PI));
     }
 
     /**
@@ -293,42 +257,40 @@ class ValveBuilder {
     }
 
     /**
-     * Creates the Set of IfcBooleanResult items that represent the valve.
+     * Creates the Set of IfcRevolvedAreaSolid items that represent the valve.
      *
      * @throws NullPointerException If {@link #addBottomOutput(double, double,
-     *                              double, double)} was not called (because all
-     *                              kinds of valves have the bottom output).
+     *                              double, double)} was not called before this
+     *                              method (because all kinds of valves have the
+     *                              bottom output).
      */
     Set<IfcRepresentationItem> build() {
         if (outputs[0] == null) {
             throw new NullPointerException(
                     "a bottom output must be added before building the valve");
         }
-        // we'll have at most 1 sphere, 4 cones and 4 flanges
-        Set<IfcRepresentationItem> valveItems = new HashSet<>(10, 1);
+        // we'll have at most 1 sphere and 4 outputs
+        Set<IfcRepresentationItem> valveItems = new HashSet<>(6, 1);
         List<Double> possibleSphereRadiuses = new ArrayList<>(8);
 
         for (byte i = 0; i < outputs.length; i++) {
             if (outputs[i] != null) {
-                valveItems.addAll(buildValveOutput(i,
-                                                   thickness,
-                                                   outputs[i].radius,
-                                                   outputs[i].length,
-                                                   outputs[i].crownRadius,
-                                                   outputs[i].crownThickness,
-                                                   outputs[0].length));
+                valveItems.add(buildValveOutput(i,
+                                                outputs[i].radius,
+                                                outputs[i].length,
+                                                outputs[i].crownRadius,
+                                                outputs[i].crownThickness));
                 possibleSphereRadiuses.add(outputs[i].radius);
                 possibleSphereRadiuses.add(outputs[i].length);
             }
         }
         // creating the central sphere
-        IfcAxis2Placement2D circlePosition = new IfcAxis2Placement2D(0, 0);
         IfcPositiveLengthMeasure circleRadius =
                 new IfcPositiveLengthMeasure(min(possibleSphereRadiuses));
         IfcCircleProfileDef circle =
                 new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
                                         null,
-                                        circlePosition,
+                                        new IfcAxis2Placement2D(0, 0),
                                         circleRadius);
         IfcAxis2Placement3D spherePosition =
                 new IfcAxis2Placement3D(0, 0, outputs[0].length);
@@ -340,16 +302,7 @@ class ValveBuilder {
                                                                rotationAxis,
                                                                new IfcPlaneAngleMeasure(
                                                                        PI));
-        // all items in valveItems must be of type IfcBooleanResult, because
-        // when they'll be put in an IfcShapeRepresentation their type will
-        // have to be according to representationType "CSG"; so we have to
-        // merge sphere with an object from valveItems
-        IfcBooleanResult sphereWrapper =
-                new IfcBooleanResult(IfcBooleanOperator.UNION,
-                                     sphere,
-                                     (IfcBooleanOperand) valveItems.iterator()
-                                             .next());
-        valveItems.add(sphereWrapper);
+        valveItems.add(sphere);
         return valveItems;
     }
 

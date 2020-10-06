@@ -13,7 +13,7 @@
       {
         "type": "EccentricCone",
         "radius1": 254.00,
-        "radius2": 203.20,
+        "radius2": 100.00,
         "length": 508.00,
         "thickness": 28.60,
         "lining": 0.00,
@@ -25,7 +25,7 @@
           "NDIAMETRO1": 508,
           "NCOR_ALLOW": 1,
           "NSPESS": 28.6,
-          "NDIAMETRO2": 406.4
+          "NDIAMETRO2": 200
         },
         "matrix": [
           1.00,
