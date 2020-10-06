@@ -1,49 +1,47 @@
 {
-  "metadata": {
-    "type": "eywa 2.0",
-    "use": "view"
+  "metadata" : {
+    "type" : "eywa 2.0",
+    "use" : "view"
   },
-  "hints": {
-    "depth": 0,
-    "geometries": 2,
-    "projection": "isometric",
-    "inside": true
+  "hints" : {
+    "depth" : 0,
+    "geometries" : 2,
+    "projection" : "isometric",
+    "inside" : true
   },
-  "object": {
-    "type": "Empty",
-    "id": "47701",
-    "imId": 9744,
-    "placeId": "437",
-    "bboxId": "442",
-    "children": [
-      {
-        "type": "ThreeWaysValve",
-        "radius1": 2,
-        "length1": 3.5,
-        "crownRadius1": 3,
-        "crownThickness1": 0.5,
-        "radius2": 1.5,
-        "length2": 6,
-        "crownRadius2": 2.5,
-        "crownThickness2": 0.2,
-        "thickness": 0.1,
-        "lining": 0.1,
-        "position": [
-          0,
-          4,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "id": "110334",
-        "imId": 1110684724,
-        "placeId": "8457",
-        "bboxId": "134461",
-        "name": "THREE"
-      }
-    ]
+  "object" : {
+    "type" : "Empty",
+    "id" : "99862640638058496",
+    "placeId" : "99860240741195776",
+    "thickness" : 0.01,
+    "lining" : 0.0,
+    "children" : [ {
+      "type" : "ThreeWaysValve",
+      "id" : "99862640612892672",
+      "placeId" : "99860240741195776",
+      "thickness" : 1.2,
+      "lining" : 0.0,
+      "through" : [ {
+        "torsion" : 0.0,
+        "his" : 0,
+        "mine" : 0
+      } ],
+      "radius1" : 12.0,
+      "radius2" : 12.0,
+      "radius3" : 12.0,
+      "length1" : 50.0,
+      "length2" : 30.0,
+      "length3" : 70.0,
+      "crownRadius1" : 24.0,
+      "crownRadius2" : 24.0,
+      "crownRadius3" : 24.0,
+      "crownThickness1" : 10.0,
+      "crownThickness2" : 5.0,
+      "crownThickness3" : 10.0,
+      "maxRadius" : 12.0,
+      "bboxId" : "99862259774283776",
+      "name" : "name"
+    } ],
+    "bboxId" : "99860240942522368"
   }
 }

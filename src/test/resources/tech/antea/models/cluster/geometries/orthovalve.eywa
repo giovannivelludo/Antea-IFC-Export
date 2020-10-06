@@ -1,52 +1,43 @@
 {
-  "metadata": {
-    "type": "eywa 2.0",
-    "use": "view"
+  "metadata" : {
+    "type" : "eywa 2.0",
+    "use" : "view"
   },
-  "hints": {
-    "depth": 0,
-    "geometries": 2,
-    "projection": "isometric",
-    "inside": true
+  "hints" : {
+    "depth" : 0,
+    "geometries" : 2,
+    "projection" : "isometric",
+    "inside" : true
   },
-  "object": {
-    "type": "Empty",
-    "id": "47701",
-    "imId": 9744,
-    "placeId": "437",
-    "bboxId": "442",
-    "children": [
-      {
-        "type": "OrthoValve",
-        "thickness": 0.0,
-        "lining": 0.0,
-        "matrix": [
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          0.0,
-          1116500.0,
-          803900.0,
-          2922.0,
-          1.0
-        ],
-        "radius1": 24.13,
-        "length1": 240.0,
-        "maxRadius": 24.13,
-        "id": "110334",
-        "imId": 1110684724,
-        "placeId": "8457",
-        "bboxId": "134461",
-        "name": "Valvola Orto"
-      }
-    ]
+  "object" : {
+    "type" : "Empty",
+    "id" : "99861779878797312",
+    "placeId" : "99860113204994048",
+    "thickness" : 0.01,
+    "lining" : 0.0,
+    "children" : [ {
+      "type" : "OrthoValve",
+      "id" : "99861779874603008",
+      "placeId" : "99860113204994048",
+      "thickness" : 1.2,
+      "lining" : 0.0,
+      "through" : [ {
+        "torsion" : 0.0,
+        "his" : 0,
+        "mine" : 0
+      } ],
+      "radius1" : 10.0,
+      "radius2" : 15.0,
+      "length1" : 50.0,
+      "length2" : 70.0,
+      "crownRadius1" : 20.0,
+      "crownRadius2" : 30.0,
+      "crownThickness1" : 10.0,
+      "crownThickness2" : 5.0,
+      "maxRadius" : 15.0,
+      "bboxId" : "99861060643741696",
+      "name" : "name"
+    } ],
+    "bboxId" : "99860113947385856"
   }
 }

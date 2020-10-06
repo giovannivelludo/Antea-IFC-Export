@@ -347,7 +347,7 @@ public class EywaToIfcConverter implements EywaConverter {
         if (vector.length != 4) {
             throw new IllegalArgumentException("length of vector must be 4");
         } else if (rotations.length != 3) {
-            throw new IllegalArgumentException("length of rotation must be 3");
+            throw new IllegalArgumentException("length of rotations must be 3");
         }
         if (!order.matches("^[XYZ]{3}$")) {
             throw new IllegalArgumentException(
@@ -383,7 +383,7 @@ public class EywaToIfcConverter implements EywaConverter {
 
     /**
      * @param p The {@link Primitive} for which to return the thickness.
-     * @return The Primitive's thickness if it exist and it's bigger than 0, 0.1
+     * @return The Primitive's thickness if it exist and is bigger than 0, 0.1
      * otherwise.
      */
     private static double getSafeThickness(Primitive p) {
@@ -1300,7 +1300,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcProductDefinitionShape expansionJoint =
                 buildExpansionJoint(obj.getRadius(),
                                     obj.getLength(),
-                                    obj.getThickness());
+                                    getSafeThickness(obj));
         IfcFlowSegment expansionJointProduct =
                 IfcFlowSegment.flowSegmentBuilder()
                         .globalId(new IfcGloballyUniqueId())
@@ -1551,7 +1551,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcProductDefinitionShape expansionJoint =
                 buildExpansionJoint(obj.getRadius(),
                                     obj.getLength(),
-                                    obj.getThickness());
+                                    getSafeThickness(obj));
         IfcFlowSegment expansionJointProxy = IfcFlowSegment.flowSegmentBuilder()
                 .globalId(new IfcGloballyUniqueId()).ownerHistory(ownerHistory)
                 .name(new IfcLabel(obj.getClass().getSimpleName()))
@@ -1631,36 +1631,24 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull FourWaysValve obj) {
-        double radius1, radius2, radius3, radius4;
-        if (obj.getRadius() != null && obj.getRadius() != 0) {
-            radius1 = obj.getRadius();
-            radius2 = obj.getRadius();
-            radius3 = obj.getRadius();
-            radius4 = obj.getRadius();
-        } else {
-            radius1 = obj.getRadius1();
-            radius2 = obj.getRadius2();
-            radius3 = obj.getRadius3();
-            radius4 = obj.getRadius4();
-        }
-
         Set<IfcRepresentationItem> valveItems =
-                new ValveBuilder(getSafeThickness(obj)).addBottomOutput(radius1,
-                                                                        obj.getLength1(),
-                                                                        obj.getCrownRadius1(),
-                                                                        obj.getCrownThickness1())
-                        .addRightOutput(radius2,
+                new ValveBuilder(getSafeThickness(obj))
+                        .addBottomOutput(obj.getRadius1(),
+                                         obj.getLength1(),
+                                         obj.getCrownRadius1(),
+                                         obj.getCrownThickness1())
+                        .addRightOutput(obj.getRadius2(),
                                         obj.getLength2(),
                                         obj.getCrownRadius2(),
                                         obj.getCrownThickness2()).addTopOutput(
-                        radius3,
+                        obj.getRadius3(),
                         obj.getLength3(),
                         obj.getCrownRadius3(),
-                        obj.getCrownThickness3()).addLeftOutput(radius4,
-                                                                obj.getLength4(),
-                                                                obj.getCrownRadius4(),
-                                                                obj.getCrownThickness4())
-                        .build();
+                        obj.getCrownThickness3())
+                        .addLeftOutput(obj.getRadius4(),
+                                       obj.getLength4(),
+                                       obj.getCrownRadius4(),
+                                       obj.getCrownThickness4()).build();
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
@@ -2041,28 +2029,20 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull OrthoValve obj) {
-        double radius1, radius2;
-        if (obj.getRadius() != null && obj.getRadius() != 0) {
-            radius1 = obj.getRadius();
-            radius2 = obj.getRadius();
-        } else {
-            radius1 = obj.getRadius1();
-            radius2 = obj.getRadius2();
-        }
-
         ValveBuilder valveBuilder = new ValveBuilder(getSafeThickness(obj));
         if (obj.getWelded() != null && obj.getWelded()) {
-            valveBuilder.addBottomOutput(radius1,
+            valveBuilder.addBottomOutput(obj.getRadius1(),
                                          obj.getLength1(),
                                          obj.getCrownRadius1(),
                                          obj.getCrownThickness1())
-                    .addRightOutput(radius2,
+                    .addRightOutput(obj.getRadius2(),
                                     obj.getLength2(),
                                     obj.getCrownRadius2(),
                                     obj.getCrownThickness2());
         } else {
-            valveBuilder.addBottomOutput(radius1, obj.getLength1(), 0, 0)
-                    .addTopOutput(radius2, obj.getLength2(), 0, 0);
+            valveBuilder
+                    .addBottomOutput(obj.getRadius1(), obj.getLength1(), 0, 0)
+                    .addRightOutput(obj.getRadius2(), obj.getLength2(), 0, 0);
         }
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
@@ -2853,27 +2833,17 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull ThreeWaysValve obj) {
-        double radius1, radius2, radius3;
-        if (obj.getRadius() != null && obj.getRadius() != 0) {
-            radius1 = obj.getRadius();
-            radius2 = obj.getRadius();
-            radius3 = obj.getRadius();
-        } else {
-            radius1 = obj.getRadius1();
-            radius2 = obj.getRadius2();
-            radius3 = obj.getRadius3();
-        }
-
         Set<IfcRepresentationItem> valveItems =
-                new ValveBuilder(getSafeThickness(obj)).addBottomOutput(radius1,
-                                                                        obj.getLength1(),
-                                                                        obj.getCrownRadius1(),
-                                                                        obj.getCrownThickness1())
-                        .addRightOutput(radius2,
+                new ValveBuilder(getSafeThickness(obj))
+                        .addBottomOutput(obj.getRadius1(),
+                                         obj.getLength1(),
+                                         obj.getCrownRadius1(),
+                                         obj.getCrownThickness1())
+                        .addRightOutput(obj.getRadius2(),
                                         obj.getLength2(),
                                         obj.getCrownRadius2(),
                                         obj.getCrownThickness2()).addTopOutput(
-                        radius3,
+                        obj.getRadius3(),
                         obj.getLength3(),
                         obj.getCrownRadius3(),
                         obj.getCrownThickness3()).build();
@@ -2905,27 +2875,20 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Valve obj) {
-        double radius1, radius2;
-        if (obj.getRadius() != null && obj.getRadius() != 0) {
-            radius1 = obj.getRadius();
-            radius2 = obj.getRadius();
-        } else {
-            radius1 = obj.getRadius1();
-            radius2 = obj.getRadius2();
-        }
         ValveBuilder valveBuilder = new ValveBuilder(getSafeThickness(obj));
         if (obj.getFlanged() != null && obj.getFlanged()) {
-            valveBuilder.addBottomOutput(radius1,
+            valveBuilder.addBottomOutput(obj.getRadius1(),
                                          obj.getLength1(),
                                          obj.getCrownRadius1(),
                                          obj.getCrownThickness1()).addTopOutput(
-                    radius2,
+                    obj.getRadius2(),
                     obj.getLength2(),
                     obj.getCrownRadius2(),
                     obj.getCrownThickness2());
         } else {
-            valveBuilder.addBottomOutput(radius1, obj.getLength1(), 0, 0)
-                    .addTopOutput(radius2, obj.getLength2(), 0, 0);
+            valveBuilder
+                    .addBottomOutput(obj.getRadius1(), obj.getLength1(), 0, 0)
+                    .addTopOutput(obj.getRadius2(), obj.getLength2(), 0, 0);
         }
 
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(

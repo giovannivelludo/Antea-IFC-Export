@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "type": "eywa 2.0",
+    "use": "view"
+  },
+  "hints": {
+    "depth": 1,
+    "geometries": 22171,
+    "projection": "perspective",
+    "inside": true
+  },
+  "object": {
+    "type": "Empty",
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "children": [
+      {
+        "type": "Dish",
+        "id": 24472,
+        "bboxId": 26464,
+        "placeId": 33,
+        "radius": 4000,
+        "direction": [
+          1,
+          0,
+          0
+        ],
+        "distance": 350
+      }
+    ]
+  }
+}
