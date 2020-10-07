@@ -80,7 +80,7 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * The set containing the converted Eywa geometries.
      */
-    private final Set<IfcProduct> geometries = new HashSet<>();
+    private final Set<IfcProduct> geometries = new LinkedHashSet<>();
     /**
      * Maps each Primitive in the Eywa tree to its placement.
      */
@@ -1263,7 +1263,7 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(@NonNull EccentricCone obj) {
         double slice = 2 * PI / RADIAL_SEGMENTS;
-        // angles at which the points composing the circle will be drawn
+        // angles at which the points composing circles will be drawn
         double[] angles =
                 IntStream.range(0, RADIAL_SEGMENTS).mapToDouble(i -> i * slice)
                         .toArray();
@@ -1296,7 +1296,9 @@ public class EywaToIfcConverter implements EywaConverter {
 
         Set<IfcFace> faces = new HashSet<>(3 + angles.length, 1);
 
-        // creating the top and bottom bases
+        // creating the top and bottom bases, because the same point cannot
+        // appear twice in the same IfcPolyLoop we'll have to split each of
+        // the 2 bases into 2 parts
         List<IfcCartesianPoint> bottomBase1 =
                 new ArrayList<>(angles.length + 2);
         List<IfcCartesianPoint> bottomBase2 =
@@ -1873,10 +1875,10 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(@NonNull Nozzle obj) {
         Set<IfcRepresentationItem> nozzleItems = new HashSet<>(5, 1);
-        boolean hasTrunk =
-                obj.getTrunkLength() != null && obj.getTrunkLength() != 0;
-        boolean hasTang =
-                obj.getTangLength() != null && obj.getTangLength() != 0;
+        double trunkLength =
+                obj.getTrunkLength() != null ? obj.getTrunkLength() : 0;
+        double tangLength = obj.getTangLength() != null ? obj.getTangLength() :
+                obj.getLength() - obj.getCrownThickness() - trunkLength;
         double raisedFaceLength = obj.getCrownThickness() / 10;
         double voidRadius = obj.getRadius() - getSafeThickness(obj);
         double raisedFaceRadius =
@@ -1884,7 +1886,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcAxis2Placement2D sectionPosition = new IfcAxis2Placement2D(0, 0);
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
-        if (hasTrunk) {
+        if (trunkLength != 0) {
             IfcCircleHollowProfileDef trunkSection =
                     new IfcCircleHollowProfileDef(IfcProfileTypeEnum.AREA,
                                                   null,
@@ -1899,20 +1901,20 @@ public class EywaToIfcConverter implements EywaConverter {
                                                                   trunkPosition,
                                                                   extrusionDirection,
                                                                   new IfcLengthMeasure(
-                                                                          obj.getTrunkLength()));
+                                                                          trunkLength));
             nozzleItems.add(trunk);
         }
 
-        if (hasTang) {
+        if (tangLength != 0) {
             IfcPolyline trapezium =
                     new IfcPolyline(new IfcCartesianPoint(voidRadius, 0),
                                     new IfcCartesianPoint(
                                             voidRadius + getSafeThickness(obj),
                                             0),
                                     new IfcCartesianPoint(raisedFaceRadius,
-                                                          obj.getTangLength()),
+                                                          tangLength),
                                     new IfcCartesianPoint(voidRadius,
-                                                          obj.getTangLength()));
+                                                          tangLength));
             IfcArbitraryClosedProfileDef sweptArea =
                     new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
                                                      null,
@@ -1920,7 +1922,8 @@ public class EywaToIfcConverter implements EywaConverter {
             IfcAxis2Placement3D tangPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0,
                                                                   0,
-                                                                  hasTrunk ?
+                                                                  trunkLength !=
+                                                                          0 ?
                                                                           obj.getTrunkLength() :
                                                                           0),
                                             // the z axis is rotated by PI/2
@@ -1953,13 +1956,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcPositiveLengthMeasure(obj.getCrownRadius()),
                 new IfcPositiveLengthMeasure(
                         obj.getCrownRadius() - voidRadius));
-        double crownZOffset = 0;
-        if (hasTrunk) {
-            crownZOffset = obj.getTrunkLength();
-        }
-        if (hasTang) {
-            crownZOffset += obj.getTangLength();
-        }
+        double crownZOffset = trunkLength + tangLength;
         IfcAxis2Placement3D crownPosition =
                 new IfcAxis2Placement3D(0, 0, crownZOffset);
         IfcExtrudedAreaSolid crown = new IfcExtrudedAreaSolid(crownSection,
@@ -1978,13 +1975,8 @@ public class EywaToIfcConverter implements EywaConverter {
                                               new IfcPositiveLengthMeasure(
                                                       raisedFaceRadius -
                                                               voidRadius));
-        double raisedFaceZOffset = obj.getCrownThickness();
-        if (hasTrunk) {
-            raisedFaceZOffset += obj.getTrunkLength();
-        }
-        if (hasTang) {
-            raisedFaceZOffset += obj.getTangLength();
-        }
+        double raisedFaceZOffset =
+                obj.getCrownThickness() + trunkLength + tangLength;
         IfcAxis2Placement3D raisedFacePosition =
                 new IfcAxis2Placement3D(0, 0, raisedFaceZOffset);
         IfcExtrudedAreaSolid raisedFace = new IfcExtrudedAreaSolid(
@@ -2004,14 +1996,8 @@ public class EywaToIfcConverter implements EywaConverter {
 
         IfcLocalPlacement objectPlacement = resolveLocation(obj);
         if (obj.isSwitched()) {
-            double length = 0;
-            if (hasTrunk) {
-                length = obj.getTrunkLength();
-            }
-            if (hasTang) {
-                length += obj.getTangLength();
-            }
-            length += obj.getCrownThickness() + raisedFaceLength;
+            double length = trunkLength + tangLength + obj.getCrownThickness() +
+                    raisedFaceLength;
             objectPlacement = flip(objectPlacement, length);
         }
         IfcFlowController nozzleProduct =
