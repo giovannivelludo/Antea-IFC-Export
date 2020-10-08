@@ -49,17 +49,17 @@ public class EywaToIfcConverter implements EywaConverter {
 
     /**
      * If {@code true}, the position of the converted objects will be relative
-     * to the world coordinate system, otherwise it will be relative to the
-     * position of the IfcProduct representing their parent in the Eywa tree.
+     * to the world coordinate system, otherwise it will be relative to their
+     * parent in the Eywa tree.
      */
     private static final boolean USE_ABSOLUTE_PLACEMENTS = false;
     /**
-     * Number of points used to draw circles in
-     * {@link #addObject(EccentricCone)}.
+     * Number of segments used to draw circles in {@link
+     * #addObject(EccentricCone)}.
      */
-    private static final int RADIAL_SEGMENTS = 32;
+    private static final int RADIAL_SEGMENTS = 16;
 
-    private static final String COMPANY_NAME = "Antea";
+    private static final String COMPANY_NAME = "Antea S.r.l.";
     private static final String PROGRAM_NAME = "Antea IFC Export";
     private static final String PROGRAM_VERSION = "0.0.1-SNAPSHOT";
     private static final String PROGRAM_ID = "com.anteash:ifc";
@@ -2802,8 +2802,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("CSG"),
-                pipe,
-                derivationPipe);
+                new LinkedHashSet<>(Arrays.asList(pipe, derivationPipe)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcFlowFitting teeProduct = IfcFlowFitting.flowFittingBuilder()
