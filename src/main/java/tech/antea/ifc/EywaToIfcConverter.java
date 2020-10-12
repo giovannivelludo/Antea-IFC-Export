@@ -300,7 +300,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 localCoordSys.getLocation().getCoordinates().stream()
                         .mapToDouble(IfcLengthMeasure::getValue).toArray();
         double[] zAxisNormCoords =
-                localCoordSys.getAxis().getNormalisedDirectionRatios().stream()
+                localCoordSys.getP().get(2).getDirectionRatios().stream()
                         .mapToDouble(IfcReal::getValue).toArray();
         double[] shiftedOriginCoords = IntStream.range(0, originCoords.length)
                 .mapToDouble(i -> originCoords[i] + length * zAxisNormCoords[i])
@@ -310,7 +310,7 @@ public class EywaToIfcConverter implements EywaConverter {
 
         // flipping the z axis
         double[] flippedAxisCoords =
-                localCoordSys.getAxis().getDirectionRatios().stream()
+                localCoordSys.getP().get(2).getDirectionRatios().stream()
                         .mapToDouble(ifcreal -> -ifcreal.getValue()).toArray();
         IfcDirection flippedAxis = new IfcDirection(flippedAxisCoords);
 
@@ -320,7 +320,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcAxis2Placement3D newLocalCoordSys = new IfcAxis2Placement3D(
                 shiftedOrigin,
                 flippedAxis,
-                localCoordSys.getRefDirection());
+                localCoordSys.getP().get(0));
         return new IfcLocalPlacement(unflipped.getPlacementRelTo(),
                                      newLocalCoordSys);
     }
@@ -722,20 +722,25 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     private IfcLocalPlacement resolveLocation(@NonNull Primitive obj) {
         IfcAxis2Placement3D parentPosition;
-        if (USE_ABSOLUTE_PLACEMENTS) {
+        if (obj.getParent() == null) {
+            // obj is the root object, so we must rotate its coordinate
+            // system to match the one used in demoplant.anteash.com, as
+            // normally in the Eywa specification the upward axis would be y
+            // and the one pointing towards the screen would be z, but in
+            // demoplant the upward axis is z and the one pointing towards
+            // the screen is x.
+            parentPosition =
+                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
+                                            new IfcDirection(0, 1, 0),
+                                            new IfcDirection(0, 0, 1));
+        } else if (USE_ABSOLUTE_PLACEMENTS) {
             IfcLocalPlacement parentPlacement =
                     objPositions.get(obj.getParent());
-            if (parentPlacement == null) {
-                // obj is the root object
-                parentPosition = new IfcAxis2Placement3D(0, 0, 0);
-            } else {
-                parentPosition = (IfcAxis2Placement3D) parentPlacement
-                        .getRelativePlacement();
-            }
+            parentPosition = (IfcAxis2Placement3D) parentPlacement
+                    .getRelativePlacement();
         } else {
             parentPosition = new IfcAxis2Placement3D(0, 0, 0);
         }
-
         IfcAxis2Placement3D objPosition;
         if (obj.getMatrix() != null) {
             Double[] matrix = obj.getMatrix();
@@ -769,10 +774,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                             new IfcDirection(axis),
                                             new IfcDirection(refDir));
         } else if (obj.getPosition() == null && obj.getRotation() == null) {
-            objPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0, 0, 0),
-                                            new IfcDirection(0, 0, 1),
-                                            new IfcDirection(1, 0, 0));
+            objPosition = parentPosition;
         } else {
             // using position and rotation
             double[] eywaParentLocation =
