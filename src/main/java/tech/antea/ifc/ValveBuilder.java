@@ -285,23 +285,11 @@ class ValveBuilder {
             }
         }
         // creating the central sphere
-        IfcPositiveLengthMeasure circleRadius =
-                new IfcPositiveLengthMeasure(min(possibleSphereRadiuses));
-        IfcCircleProfileDef circle =
-                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
-                                        null,
-                                        new IfcAxis2Placement2D(0, 0),
-                                        circleRadius);
+        double sphereRadius = min(possibleSphereRadiuses);
         IfcAxis2Placement3D spherePosition =
                 new IfcAxis2Placement3D(0, 0, outputs[0].length);
-        IfcAxis1Placement rotationAxis =
-                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                      new IfcDirection(0, 1, 0));
-        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
-                                                               spherePosition,
-                                                               rotationAxis,
-                                                               new IfcPlaneAngleMeasure(
-                                                                       PI));
+        IfcRevolvedAreaSolid sphere =
+                EywaToIfcConverter.buildSphere(sphereRadius, spherePosition);
         valveItems.add(sphere);
         return valveItems;
     }

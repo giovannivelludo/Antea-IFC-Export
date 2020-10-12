@@ -551,6 +551,60 @@ public class EywaToIfcConverter implements EywaConverter {
     }
 
     /**
+     * @param radius   Radius of the sphere.
+     * @param position Position of the sphere.
+     * @return The sphere created according to the given parameters.
+     *
+     * @throws IllegalArgumentException If {@code radius} is not bigger than
+     *                                  zero.
+     */
+    static IfcRevolvedAreaSolid buildSphere(double radius,
+                                            IfcAxis2Placement3D position) {
+        IfcCircle circumference = new IfcCircle(new IfcAxis2Placement2D(0, 0),
+                                                new IfcPositiveLengthMeasure(
+                                                        radius));
+        IfcCartesianPoint topCircumferencePt = new IfcCartesianPoint(0, radius);
+        IfcCartesianPoint bottomCircumferencePt =
+                new IfcCartesianPoint(0, -radius);
+        Set<IfcTrimmingSelect> trim1 = new LinkedHashSet<>(Arrays.asList(
+                bottomCircumferencePt,
+                new IfcParameterValue(3 * PI / 2)));
+        Set<IfcTrimmingSelect> trim2 = new LinkedHashSet<>(Arrays.asList(
+                topCircumferencePt,
+                new IfcParameterValue(PI / 2)));
+        IfcTrimmedCurve halfCircumference = new IfcTrimmedCurve(circumference,
+                                                                trim1,
+                                                                trim2,
+                                                                IfcBoolean.T,
+                                                                IfcTrimmingPreference.CARTESIAN);
+
+        IfcPolyline diameter =
+                new IfcPolyline(topCircumferencePt, bottomCircumferencePt);
+
+        List<IfcCompositeCurveSegment> segments = new ArrayList<>(2);
+        segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                  IfcBoolean.T,
+                                                  halfCircumference));
+        segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                  IfcBoolean.T,
+                                                  diameter));
+        IfcCompositeCurve halfCircle =
+                new IfcCompositeCurve(segments, IfcLogical.F);
+        IfcArbitraryClosedProfileDef halfCircleWrapper =
+                new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                 null,
+                                                 halfCircle);
+
+        IfcAxis1Placement rotationAxis =
+                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
+                                      new IfcDirection(0, 1, 0));
+        return new IfcRevolvedAreaSolid(halfCircleWrapper,
+                                        position,
+                                        rotationAxis,
+                                        new IfcPlaneAngleMeasure(2 * PI));
+    }
+
+    /**
      * Initializes {@code this.ownerHistory}. This field will be needed when
      * creating the IfcProducts that represent instances of Eywa Primitives.
      */
@@ -1175,22 +1229,8 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Dish obj) {
-        IfcCircleProfileDef circle =
-                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
-                                        null,
-                                        new IfcAxis2Placement2D(0, 0),
-                                        new IfcPositiveLengthMeasure(obj.getRadius()));
-        IfcAxis1Placement rotationAxis =
-                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                      new IfcDirection(0, 1, 0));
-        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
-                                                               new IfcAxis2Placement3D(
-                                                                       0,
-                                                                       0,
-                                                                       0),
-                                                               rotationAxis,
-                                                               new IfcPlaneAngleMeasure(
-                                                                       PI));
+        IfcRevolvedAreaSolid sphere =
+                buildSphere(obj.getRadius(), new IfcAxis2Placement3D(0, 0, 0));
 
         IfcCartesianPoint cuttingPlaneLocation =
                 new IfcCartesianPoint(obj.getDirection()[2] * obj.getDistance(),
@@ -1442,38 +1482,85 @@ public class EywaToIfcConverter implements EywaConverter {
             }
         } else {
             IfcAxis2Placement2D ellipsePosition = new IfcAxis2Placement2D(0, 0);
-            IfcEllipseProfileDef outerEllipse = new IfcEllipseProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    ellipsePosition,
-                    new IfcPositiveLengthMeasure(obj.getRadius()),
-                    new IfcPositiveLengthMeasure(semiAxis2));
-            IfcAxis2Placement3D outerEllipsoidPosition =
-                    new IfcAxis2Placement3D(new IfcCartesianPoint(0,
-                                                                  0,
-                                                                  obj.getNeck()),
-                                            // the z axis is rotated by PI/2
-                                            // towards the negative y axis, and
-                                            // the y axis becomes the
-                                            // vertical axis
-                                            new IfcDirection(0, -1, 0),
-                                            new IfcDirection(1, 0, 0));
-            IfcRevolvedAreaSolid outerEllipsoid = new IfcRevolvedAreaSolid(
+            IfcEllipse outerEllipse = new IfcEllipse(ellipsePosition,
+                                                     new IfcPositiveLengthMeasure(
+                                                             obj.getRadius()),
+                                                     new IfcPositiveLengthMeasure(
+                                                             semiAxis2));
+            IfcEllipse innerEllipse = new IfcEllipse(ellipsePosition,
+                                                     new IfcPositiveLengthMeasure(
+                                                             obj.getRadius() -
+                                                                     getSafeThickness(
+                                                                             obj)),
+                                                     new IfcPositiveLengthMeasure(
+                                                             semiAxis2 -
+                                                                     getSafeThickness(
+                                                                             obj)));
+
+            IfcCartesianPoint topOuterEllipsePt =
+                    new IfcCartesianPoint(0, semiAxis2);
+            IfcCartesianPoint topInnerEllipsePt =
+                    new IfcCartesianPoint(0, semiAxis2 - getSafeThickness(obj));
+            IfcCartesianPoint rightOuterEllipsePt =
+                    new IfcCartesianPoint(obj.getRadius(), 0);
+            IfcCartesianPoint rightInnerEllipsePt = new IfcCartesianPoint(
+                    obj.getRadius() - getSafeThickness(obj), 0);
+
+            Set<IfcTrimmingSelect> outerTrim1 =
+                    new LinkedHashSet<>(Arrays.asList(rightOuterEllipsePt,
+                                                      new IfcParameterValue(0)));
+            Set<IfcTrimmingSelect> outerTrim2 =
+                    new LinkedHashSet<>(Arrays.asList(topOuterEllipsePt,
+                                                      new IfcParameterValue(
+                                                              PI / 2)));
+            IfcTrimmedCurve outerEllipseQuarter = new IfcTrimmedCurve(
                     outerEllipse,
-                    outerEllipsoidPosition,
-                    new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                          new IfcDirection(0, 1, 0)),
-                    new IfcPlaneAngleMeasure(PI));
+                    outerTrim1,
+                    outerTrim2,
+                    IfcBoolean.T,
+                    IfcTrimmingPreference.CARTESIAN);
 
-            IfcEllipseProfileDef innerEllipse = new IfcEllipseProfileDef(
-                    IfcProfileTypeEnum.AREA,
-                    null,
-                    ellipsePosition,
-                    new IfcPositiveLengthMeasure(
-                            obj.getRadius() - getSafeThickness(obj)),
-                    new IfcPositiveLengthMeasure(
-                            semiAxis2 - getSafeThickness(obj)));
-            IfcAxis2Placement3D innerEllipsoidPosition =
+            IfcPolyline verticalThickness =
+                    new IfcPolyline(topOuterEllipsePt, topInnerEllipsePt);
+
+            Set<IfcTrimmingSelect> innerTrim1 =
+                    new LinkedHashSet<>(Arrays.asList(rightInnerEllipsePt,
+                                                      new IfcParameterValue(0)));
+            Set<IfcTrimmingSelect> innerTrim2 =
+                    new LinkedHashSet<>(Arrays.asList(topInnerEllipsePt,
+                                                      new IfcParameterValue(
+                                                              PI / 2)));
+            IfcTrimmedCurve innerEllipseQuarter = new IfcTrimmedCurve(
+                    innerEllipse,
+                    innerTrim1,
+                    innerTrim2,
+                    IfcBoolean.T,
+                    IfcTrimmingPreference.CARTESIAN);
+
+            IfcPolyline horizontalThickness =
+                    new IfcPolyline(rightInnerEllipsePt, rightOuterEllipsePt);
+
+            List<IfcCompositeCurveSegment> segments = new ArrayList<>(4);
+            segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                      IfcBoolean.T,
+                                                      outerEllipseQuarter));
+            segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                      IfcBoolean.T,
+                                                      verticalThickness));
+            segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                      IfcBoolean.F,
+                                                      innerEllipseQuarter));
+            segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
+                                                      IfcBoolean.T,
+                                                      horizontalThickness));
+            IfcCompositeCurve camberSection =
+                    new IfcCompositeCurve(segments, IfcLogical.F);
+            IfcArbitraryClosedProfileDef camberSectionWrapper =
+                    new IfcArbitraryClosedProfileDef(IfcProfileTypeEnum.AREA,
+                                                     null,
+                                                     camberSection);
+
+            IfcAxis2Placement3D camberPosition =
                     new IfcAxis2Placement3D(new IfcCartesianPoint(0,
                                                                   0,
                                                                   obj.getNeck()),
@@ -1483,32 +1570,21 @@ public class EywaToIfcConverter implements EywaConverter {
                                             // vertical axis
                                             new IfcDirection(0, -1, 0),
                                             new IfcDirection(1, 0, 0));
-            IfcRevolvedAreaSolid innerEllipsoid = new IfcRevolvedAreaSolid(
-                    innerEllipse,
-                    innerEllipsoidPosition,
+            IfcAxis1Placement rotationAxis =
                     new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                          new IfcDirection(0, 1, 0)),
-                    new IfcPlaneAngleMeasure(PI));
+                                          new IfcDirection(0, 1, 0));
+            IfcRevolvedAreaSolid camber = new IfcRevolvedAreaSolid(
+                    camberSectionWrapper,
+                    camberPosition,
+                    rotationAxis,
+                    new IfcPlaneAngleMeasure(2 * PI));
 
-            IfcBooleanResult ellipsoidDifference = new IfcBooleanResult(
-                    IfcBooleanOperator.DIFFERENCE,
-                    outerEllipsoid,
-                    innerEllipsoid);
-
-            IfcPlane cuttingPlane =
-                    new IfcPlane(new IfcAxis2Placement3D(0, 0, obj.getNeck()));
-            IfcHalfSpaceSolid halfSpace =
-                    new IfcHalfSpaceSolid(cuttingPlane, IfcBoolean.T);
-            IfcBooleanClippingResult halfEllipsoid =
-                    new IfcBooleanClippingResult(IfcBooleanOperator.DIFFERENCE,
-                                                 ellipsoidDifference,
-                                                 halfSpace);
             if (hasNeck) {
                 endplate = new IfcBooleanResult(IfcBooleanOperator.UNION,
                                                 neck,
-                                                halfEllipsoid);
+                                                camber);
             } else {
-                endplate = halfEllipsoid;
+                endplate = camber;
             }
         }
 
@@ -1527,7 +1603,7 @@ public class EywaToIfcConverter implements EywaConverter {
         }
 
         String representationType =
-                endplate instanceof IfcExtrudedAreaSolid ? "SweptSolid" : "CSG";
+                endplate instanceof IfcSweptAreaSolid ? "SweptSolid" : "CSG";
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
@@ -2525,22 +2601,8 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Sphere obj) {
-        IfcCircleProfileDef circle =
-                new IfcCircleProfileDef(IfcProfileTypeEnum.AREA,
-                                        null,
-                                        new IfcAxis2Placement2D(0, 0),
-                                        new IfcPositiveLengthMeasure(obj.getRadius()));
-        IfcAxis1Placement rotationAxis =
-                new IfcAxis1Placement(new IfcCartesianPoint(0, 0, 0),
-                                      new IfcDirection(0, 1, 0));
-        IfcRevolvedAreaSolid sphere = new IfcRevolvedAreaSolid(circle,
-                                                               new IfcAxis2Placement3D(
-                                                                       0,
-                                                                       0,
-                                                                       0),
-                                                               rotationAxis,
-                                                               new IfcPlaneAngleMeasure(
-                                                                       PI));
+        IfcRevolvedAreaSolid sphere =
+                buildSphere(obj.getRadius(), new IfcAxis2Placement3D(0, 0, 0));
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
