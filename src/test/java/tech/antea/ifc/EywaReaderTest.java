@@ -57,8 +57,8 @@ public class EywaReaderTest {
     @Test
     public void convert() throws IOException {
         ScanResult r = new ClassGraph()
-                .enableStaticFinalFieldConstantInitializerValues()
-                .enableAllInfo().whitelistPackages(EywaToIfcConverterTest.RESOURCES_PACKAGE).scan();
+                .whitelistPackages(EywaToIfcConverterTest.EYWA_RESOURCES_PACKAGE)
+                .scan();
         URL file =
                 r.getResourcesWithLeafName("051200TA001.eywa").getURLs().get(0);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -74,8 +74,6 @@ public class EywaReaderTest {
                 "added hints;\n" + "added Empty with imId null;\n" +
                         "added Endplate with imId 1169185472;\n" +
                         "added TankShell with imId 1169185473;\n" +
-                        "added TankShell with imId 1169185485;\n" +
-                        "added Endplate with imId 1169185500;\n" +
                         "added Shell with imId 1169185474;\n" +
                         "added Nozzle with imId 1169185475;\n" +
                         "added Shell with imId 1169185476;\n" +
@@ -87,6 +85,7 @@ public class EywaReaderTest {
                         "added Shell with imId 1169185482;\n" +
                         "added Nozzle with imId 1169185483;\n" +
                         "added Blind with imId 1169185484;\n" +
+                        "added TankShell with imId 1169185485;\n" +
                         "added Shell with imId 1169185486;\n" +
                         "added Nozzle with imId 1169185487;\n" +
                         "added Shell with imId 1169185488;\n" +
@@ -100,7 +99,8 @@ public class EywaReaderTest {
                         "added Shell with imId 1169185496;\n" +
                         "added Nozzle with imId 1169185497;\n" +
                         "added Shell with imId 1169185498;\n" +
-                        "added Nozzle with imId 1169185499.";
+                        "added Nozzle with imId 1169185499;\n" +
+                        "added Endplate with imId 1169185500.";
 
         Assert.assertEquals(expectedResult, result);
     }

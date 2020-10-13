@@ -15,11 +15,11 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -42,13 +42,16 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 @RunWith(value = Parameterized.class)
 public class EywaToIfcConverterTest {
-    public static final String RESOURCES_PACKAGE = "tech.antea";
+    public static final String EYWA_RESOURCES_PACKAGE =
+            "tech.antea.models.cluster";
     private static final String IFC_PACKAGE = "buildingsmart.ifc";
     private static final String EYWA_EXTENSION = "eywa";
     private static final String IFC_EXTENSION = "ifc";
     private static final char S = java.io.File.separatorChar;
     private static final String INPUT_DIR =
-            S + "tech" + S + "antea" + S + "models" + S + "cluster" + S;
+            "tech" + S + "antea" + S + "models" + S + "cluster" + S;
+    private static final String EXPECTED_OUTPUT_DIR =
+            "tech" + S + "antea" + S + "expectedconversions" + S;
     private static final String OUTPUT_DIR = "." + S + "ifc-out" + S;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -73,25 +76,37 @@ public class EywaToIfcConverterTest {
     /**
      * This method finds all the "*.eywa" and "*.ifc" resources inside the
      * {@code tech.antea} package. It uses the ClassGraph library to do the
-     * reflection and the classpath scanning. Assuming that each eywa file has a
-     * corresponding expected ifc file, the first will be the left element of
-     * the pair and the second the right element of the pair.
+     * reflection and the classpath scanning. The .eywa file will be the left
+     * element of the pair, the .ifc file will be the right element.
      */
     @Parameters(name = "{0}")
     public static Iterable<Pair<URL, URL>> data() {
+        List<URL> eywaUrls;
         try (ScanResult r = new ClassGraph()
-                .enableStaticFinalFieldConstantInitializerValues()
-                .enableAllInfo().whitelistPackages(RESOURCES_PACKAGE).scan()) {
-            List<URL> eywaUrls =
-                    r.getResourcesWithExtension(EYWA_EXTENSION).getURLs();
-            List<URL> expectedIfcUrls =
-                    r.getResourcesWithExtension(IFC_EXTENSION).getURLs();
-            eywaUrls.sort(Comparator.comparing(URL::getFile));
-            expectedIfcUrls.sort(Comparator.comparing(URL::getFile));
-            return IntStream.range(0, eywaUrls.size()).mapToObj(i -> new Pair<>(
-                    eywaUrls.get(i),
-                    expectedIfcUrls.get(i))).collect(Collectors.toList());
+                .whitelistPackages(EYWA_RESOURCES_PACKAGE).scan()) {
+            eywaUrls = r.getResourcesWithExtension(EYWA_EXTENSION).getURLs();
         }
+        List<URL> expectedIfcUrls = eywaUrls.stream().map(url -> {
+            String inputPath = url.toString();
+            String expectedOutputPath =
+                    inputPath.replace(INPUT_DIR, EXPECTED_OUTPUT_DIR);
+            expectedOutputPath = expectedOutputPath.substring(0,
+                                                              expectedOutputPath
+                                                                      .length() -
+                                                                      EYWA_EXTENSION
+                                                                              .length()) +
+                    IFC_EXTENSION;
+            URL expectedOutputURL = null;
+            try {
+                expectedOutputURL = new URL(expectedOutputPath);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            return expectedOutputURL;
+        }).collect(Collectors.toList());
+        return IntStream.range(0, eywaUrls.size()).mapToObj(i -> new Pair<>(
+                eywaUrls.get(i),
+                expectedIfcUrls.get(i))).collect(Collectors.toList());
     }
 
     /**
@@ -130,6 +145,7 @@ public class EywaToIfcConverterTest {
      *
      * @param strings The input List of Strings.
      * @return A copy of {@code strings} without non-deterministic substrings.
+     *
      * @throws NullPointerException If {@code strings} is {@code null}.
      */
     private static List<String> removeNonDeterministicOutput(@NonNull List<String> strings) {
