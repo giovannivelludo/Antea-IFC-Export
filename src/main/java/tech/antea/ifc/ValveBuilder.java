@@ -31,7 +31,7 @@ import buildingsmart.ifc.*;
 import lombok.NonNull;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -270,7 +270,7 @@ class ValveBuilder {
                     "a bottom output must be added before building the valve");
         }
         // we'll have at most 1 sphere and 4 outputs
-        Set<IfcRepresentationItem> valveItems = new HashSet<>(6, 1);
+        Set<IfcRepresentationItem> valveItems = new LinkedHashSet<>(6, 1);
         List<Double> possibleSphereRadiuses = new ArrayList<>(8);
 
         for (byte i = 0; i < outputs.length; i++) {

@@ -977,7 +977,7 @@ public class EywaToIfcConverter implements EywaConverter {
         boolean hasPlate =
                 obj.getCrownRadius() != null && obj.getCrownRadius() != 0;
         Set<IfcRepresentationItem> blindItems =
-                new HashSet<>(hasPlate ? 3 : 2, 1);
+                new LinkedHashSet<>(hasPlate ? 3 : 2, 1);
         double blindRadius = hasPlate ? obj.getCrownRadius() : obj.getRadius();
         IfcDirection extrusionDirection = new IfcDirection(0, 0, 1);
 
@@ -1336,7 +1336,7 @@ public class EywaToIfcConverter implements EywaConverter {
                         sin(angle) * innerRadius2 + innerRadiusDifference,
                         obj.getLength())).toArray(IfcCartesianPoint[]::new);
 
-        Set<IfcFace> faces = new HashSet<>(3 + angles.length, 1);
+        Set<IfcFace> faces = new LinkedHashSet<>(3 + angles.length, 1);
 
         // creating the top and bottom bases, because the same point cannot
         // appear twice in the same IfcPolyLoop we'll have to split each of
@@ -1664,7 +1664,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                 obj.getVertices()[offset + 1]);
         });
 
-        Set<IfcFace> faces = new HashSet<>();
+        Set<IfcFace> faces = new LinkedHashSet<>();
 
         int vertSizeIndex = 0;
         while (vertSizeIndex < obj.getFaces().length) {
@@ -1808,8 +1808,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
-                pole,
-                disc);
+                new LinkedHashSet<>(Arrays.asList(pole, disc)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
 
@@ -1897,7 +1896,7 @@ public class EywaToIfcConverter implements EywaConverter {
                                                 obj.getVertices()[offset + 1]);
         });
 
-        Set<IfcFace> faces = new HashSet<>();
+        Set<IfcFace> faces = new LinkedHashSet<>();
 
         int vertSizeIndex = 0;
         while (vertSizeIndex < obj.getFaces().length) {
@@ -1952,7 +1951,7 @@ public class EywaToIfcConverter implements EywaConverter {
      */
     @Override
     public void addObject(@NonNull Nozzle obj) {
-        Set<IfcRepresentationItem> nozzleItems = new HashSet<>(5, 1);
+        Set<IfcRepresentationItem> nozzleItems = new LinkedHashSet<>(5, 1);
         double trunkLength =
                 obj.getTrunkLength() != null ? obj.getTrunkLength() : 0;
         double tangLength = obj.getTangLength() != null ? obj.getTangLength() :
@@ -2182,8 +2181,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
-                blind,
-                plate);
+                new LinkedHashSet<>(Arrays.asList(blind, plate)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcLocalPlacement location = resolveLocation(obj);
@@ -2225,7 +2223,7 @@ public class EywaToIfcConverter implements EywaConverter {
             neckLength = length - endThickness;
         }
         Set<IfcRepresentationItem> endplateItems =
-                new HashSet<>(neckLength == 0 ? 2 : 3, 1);
+                new LinkedHashSet<>(neckLength == 0 ? 2 : 3, 1);
 
         IfcRectangleProfileDef plateSection = new IfcRectangleProfileDef(
                 IfcProfileTypeEnum.AREA,
@@ -2303,7 +2301,7 @@ public class EywaToIfcConverter implements EywaConverter {
             neckLength = length - obj.getCrownThickness();
         }
         Set<IfcRepresentationItem> flangeItems =
-                new HashSet<>(neckLength == 0 ? 2 : 3, 1);
+                new LinkedHashSet<>(neckLength == 0 ? 2 : 3, 1);
 
         if (neckLength != 0) {
             IfcRectangleHollowProfileDef neckSection =
