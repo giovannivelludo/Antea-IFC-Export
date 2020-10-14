@@ -2098,7 +2098,7 @@ public class EywaToIfcConverter implements EywaConverter {
     @Override
     public void addObject(@NonNull OrthoValve obj) {
         ValveBuilder valveBuilder = new ValveBuilder(getSafeThickness(obj));
-        if (obj.getWelded() != null && obj.getWelded()) {
+        if (obj.getFlanged() != null && obj.getFlanged()) {
             valveBuilder.addBottomOutput(obj.getRadius1(),
                                          obj.getLength1(),
                                          obj.getCrownRadius1(),
