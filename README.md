@@ -39,3 +39,10 @@ Another way to solve this issue would be writing a parser to create an
 `IfcProject` from each expected output file, and then compare that to the
 `IfcProject` generated from the actual output file (after removing timestamps
 and UUIDs).
+
+### Useful links
+[IFC 2x3 documentation](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/)  
+[CoordinationView 2.0](https://standards.buildingsmart.org/MVD/RELEASE/IFC2x3/TC1/CV2_0/IFC2x3_CV2_0.zip)  
+[Implementation agreements](https://standards.buildingsmart.org/documents/Implementation/IFC_Implementation_Agreements/)  
+[EXPRESS specification (it's a more recent version than the one used in IFC, but they're similar)](https://www.steptools.com/stds/step/IS_final_p21e3.html)  
+[Implementation guidance](https://technical.buildingsmart.org/resources/ifcimplementationguidance/)  
