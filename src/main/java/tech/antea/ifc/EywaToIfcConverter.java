@@ -32,6 +32,9 @@ import buildingsmart.io.InverseRelationship;
 import buildingsmart.io.Serializer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import it.imc.persistence.po.eytukan.*;
 import lombok.NonNull;
 
@@ -70,9 +73,9 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * Representation context for all geometries.
      */
-    private static final IfcGeometricRepresentationContext
-            GEOMETRIC_REPRESENTATION_CONTEXT =
-            new IfcGeometricRepresentationContext(new IfcLabel("Plan"),
+    private static final IfcGeometricRepresentationContext GEOMETRIC_REPRESENTATION_CONTEXT =
+            new IfcGeometricRepresentationContext(
+                    new IfcLabel("Plan"),
                     new IfcLabel("Model"),
                     new IfcDimensionCount(3),
                     new IfcReal(1.E-08),
@@ -81,11 +84,11 @@ public class EywaToIfcConverter implements EywaConverter {
     /**
      * The set containing the converted Eywa geometries.
      */
-    private final Set<IfcProduct> geometries = new LinkedHashSet<>();
+    private final Set<IfcProduct> geometries = Sets.newLinkedHashSet();
     /**
      * Maps each Primitive in the Eywa tree to its placement.
      */
-    private final Map<Primitive, IfcLocalPlacement> objPositions = new HashMap<>();
+    private final Map<Primitive, IfcLocalPlacement> objPositions = Maps.newHashMap();
     /**
      * Owner history for all {@link IfcRoot} objects in this project.
      */
@@ -497,16 +500,16 @@ public class EywaToIfcConverter implements EywaConverter {
                 new IfcPositiveLengthMeasure(radius));
         IfcCartesianPoint topCircumferencePt = new IfcCartesianPoint(0, radius);
         IfcCartesianPoint bottomCircumferencePt = new IfcCartesianPoint(0, -radius);
-        Set<IfcTrimmingSelect> trim1 = new LinkedHashSet<>(
+        Set<IfcTrimmingSelect> trim1 = Sets.newLinkedHashSet(
                 Arrays.asList(bottomCircumferencePt, new IfcParameterValue(3 * PI / 2)));
-        Set<IfcTrimmingSelect> trim2 = new LinkedHashSet<>(
+        Set<IfcTrimmingSelect> trim2 = Sets.newLinkedHashSet(
                 Arrays.asList(topCircumferencePt, new IfcParameterValue(PI / 2)));
         IfcTrimmedCurve halfCircumference = new IfcTrimmedCurve(circumference, trim1, trim2,
                 IfcBoolean.T, IfcTrimmingPreference.CARTESIAN);
 
         IfcPolyline diameter = new IfcPolyline(topCircumferencePt, bottomCircumferencePt);
 
-        List<IfcCompositeCurveSegment> segments = new ArrayList<>(2);
+        List<IfcCompositeCurveSegment> segments = Lists.newArrayListWithCapacity(2);
         segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
                 IfcBoolean.T, halfCircumference));
         segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS,
@@ -1110,10 +1113,10 @@ public class EywaToIfcConverter implements EywaConverter {
         // creating the top and bottom bases, because the same point cannot
         // appear twice in the same IfcPolyLoop we'll have to split each of
         // the 2 bases into 2 parts
-        List<IfcCartesianPoint> bottomBase1 = new ArrayList<>(angles.length + 2);
-        List<IfcCartesianPoint> bottomBase2 = new ArrayList<>(angles.length + 2);
-        List<IfcCartesianPoint> topBase1 = new ArrayList<>(angles.length + 2);
-        List<IfcCartesianPoint> topBase2 = new ArrayList<>(angles.length + 2);
+        List<IfcCartesianPoint> bottomBase1 = Lists.newArrayListWithCapacity(angles.length + 2);
+        List<IfcCartesianPoint> bottomBase2 = Lists.newArrayListWithCapacity(angles.length + 2);
+        List<IfcCartesianPoint> topBase1 = Lists.newArrayListWithCapacity(angles.length + 2);
+        List<IfcCartesianPoint> topBase2 = Lists.newArrayListWithCapacity(angles.length + 2);
         int halfPoints = angles.length / 2;
         int i = 0;
         while (i <= halfPoints) {
@@ -1239,23 +1242,22 @@ public class EywaToIfcConverter implements EywaConverter {
             IfcCartesianPoint rightOuterEllipsePt = new IfcCartesianPoint(obj.getRadius(), 0);
             IfcCartesianPoint rightInnerEllipsePt = new IfcCartesianPoint(obj.getRadius() - getSafeThickness(obj), 0);
 
-            Set<IfcTrimmingSelect> outerTrim1 = new LinkedHashSet<>(Arrays.asList(rightOuterEllipsePt, new IfcParameterValue(0)));
-            Set<IfcTrimmingSelect> outerTrim2 = new LinkedHashSet<>(Arrays.asList(topOuterEllipsePt, new IfcParameterValue(PI / 2)));
+            Set<IfcTrimmingSelect> outerTrim1 = Sets.newLinkedHashSet(Arrays.asList(rightOuterEllipsePt, new IfcParameterValue(0)));
+            Set<IfcTrimmingSelect> outerTrim2 = Sets.newLinkedHashSet(Arrays.asList(topOuterEllipsePt, new IfcParameterValue(PI / 2)));
             IfcTrimmedCurve outerEllipseQuarter = new IfcTrimmedCurve(outerEllipse, outerTrim1, outerTrim2,
                     IfcBoolean.T, IfcTrimmingPreference.CARTESIAN);
 
             IfcPolyline verticalThickness = new IfcPolyline(topOuterEllipsePt, topInnerEllipsePt);
 
-            Set<IfcTrimmingSelect> innerTrim1 = new LinkedHashSet<>(Arrays.asList(rightInnerEllipsePt, new IfcParameterValue(0)));
-            Set<IfcTrimmingSelect> innerTrim2 =
-                    new LinkedHashSet<>(Arrays.asList(topInnerEllipsePt, new IfcParameterValue(PI / 2)));
+            Set<IfcTrimmingSelect> innerTrim1 = Sets.newLinkedHashSet(Arrays.asList(rightInnerEllipsePt, new IfcParameterValue(0)));
+            Set<IfcTrimmingSelect> innerTrim2 = Sets.newLinkedHashSet(Arrays.asList(topInnerEllipsePt, new IfcParameterValue(PI / 2)));
             IfcTrimmedCurve innerEllipseQuarter = new IfcTrimmedCurve(innerEllipse, innerTrim1, innerTrim2,
                     IfcBoolean.T, IfcTrimmingPreference.CARTESIAN);
 
             IfcPolyline horizontalThickness =
                     new IfcPolyline(rightInnerEllipsePt, rightOuterEllipsePt);
 
-            List<IfcCompositeCurveSegment> segments = new ArrayList<>(4);
+            List<IfcCompositeCurveSegment> segments = Lists.newArrayListWithCapacity(4);
             segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS, IfcBoolean.T, outerEllipseQuarter));
             segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS, IfcBoolean.T, verticalThickness));
             segments.add(new IfcCompositeCurveSegment(IfcTransitionCode.CONTINUOUS, IfcBoolean.F, innerEllipseQuarter));
@@ -1353,7 +1355,7 @@ public class EywaToIfcConverter implements EywaConverter {
                             obj.getVertices()[offset], obj.getVertices()[offset + 1]);
                 });
 
-        Set<IfcFace> faces = new LinkedHashSet<>();
+        Set<IfcFace> faces = Sets.newLinkedHashSet();
 
         int vertSizeIndex = 0;
         while (vertSizeIndex < obj.getFaces().length) {
@@ -1472,7 +1474,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
-                new LinkedHashSet<>(Arrays.asList(pole, disc)));
+                Sets.newLinkedHashSet(Arrays.asList(pole, disc)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
 
@@ -1550,7 +1552,7 @@ public class EywaToIfcConverter implements EywaConverter {
                     obj.getVertices()[offset + 1]);
         });
 
-        Set<IfcFace> faces = new LinkedHashSet<>();
+        Set<IfcFace> faces = Sets.newLinkedHashSet();
 
         int vertSizeIndex = 0;
         while (vertSizeIndex < obj.getFaces().length) {
@@ -1768,7 +1770,7 @@ public class EywaToIfcConverter implements EywaConverter {
                 GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("SweptSolid"),
-                new LinkedHashSet<>(Arrays.asList(blind, plate)));
+                Sets.newLinkedHashSet(Arrays.asList(blind, plate)));
         IfcProductDefinitionShape productDefinitionShape =
                 new IfcProductDefinitionShape(null, null, shapeRepresentation);
         IfcLocalPlacement location = resolveLocation(obj);
@@ -2275,7 +2277,7 @@ public class EywaToIfcConverter implements EywaConverter {
         IfcShapeRepresentation shapeRepresentation = new IfcShapeRepresentation(GEOMETRIC_REPRESENTATION_CONTEXT,
                 new IfcLabel("Body"),
                 new IfcLabel("CSG"),
-                new LinkedHashSet<>(Arrays.asList(pipe, derivationPipe)));
+                Sets.newLinkedHashSet(Arrays.asList(pipe, derivationPipe)));
         IfcProductDefinitionShape productDefinitionShape = new IfcProductDefinitionShape
                 (null, null, shapeRepresentation);
         IfcFlowFitting teeProduct = IfcFlowFitting.flowFittingBuilder()

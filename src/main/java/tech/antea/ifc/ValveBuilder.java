@@ -26,9 +26,9 @@
 package tech.antea.ifc;
 
 import buildingsmart.ifc.*;
+import com.google.common.collect.Lists;
 import lombok.NonNull;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -235,7 +235,7 @@ class ValveBuilder {
         }
         // we'll have at most 1 sphere and 4 outputs
         Set<IfcRepresentationItem> valveItems = new LinkedHashSet<>(6, 1);
-        List<Double> possibleSphereRadiuses = new ArrayList<>(8);
+        List<Double> possibleSphereRadiuses = Lists.newArrayListWithCapacity(8);
 
         for (byte i = 0; i < outputs.length; i++) {
             if (outputs[i] != null) {
