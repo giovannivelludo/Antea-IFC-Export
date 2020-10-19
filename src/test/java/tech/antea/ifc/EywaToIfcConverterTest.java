@@ -47,8 +47,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * <p>This test verifies the conversion of Eywa Models. It is a {@code
@@ -57,7 +58,6 @@ import java.util.stream.IntStream;
  * instantiated once for every pair of URLs using the constructor {@link
  * EywaToIfcConverterTest#EywaToIfcConverterTest(Pair)} (Pair)} that is provided
  * by the {@code
- *
  * @RequiredArgsConstructor} annotation. Then, the {@code @Test} methods are
  * executed.</p>
  * <p>In order for tests to work, for each .eywa file in the test
@@ -67,32 +67,25 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 @RunWith(value = Parameterized.class)
 public class EywaToIfcConverterTest {
-    public static final String EYWA_RESOURCES_PACKAGE =
-            "tech.antea.models.cluster";
+    public static final String EYWA_RESOURCES_PACKAGE = "tech.antea.models.cluster";
     private static final String IFC_PACKAGE = "buildingsmart.ifc";
     private static final String EYWA_EXTENSION = "eywa";
     private static final String IFC_EXTENSION = "ifc";
     private static final char S = java.io.File.separatorChar;
-    private static final String INPUT_DIR =
-            "tech" + S + "antea" + S + "models" + S + "cluster" + S;
-    private static final String EXPECTED_OUTPUT_DIR =
-            "tech" + S + "antea" + S + "expectedconversions" + S;
+    private static final String INPUT_DIR = "tech" + S + "antea" + S + "models" + S + "cluster" + S;
+    private static final String EXPECTED_OUTPUT_DIR = "tech" + S + "antea" + S + "expectedconversions" + S;
     private static final String OUTPUT_DIR = "." + S + "ifc-out" + S;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final EywaReader reader =
-            new EywaReader(new EywaToIfcConverter());
+    private static final EywaReader reader = new EywaReader(new EywaToIfcConverter());
     private static final String[] ifcRootSubclassesRegex;
 
     static {
-        try (ScanResult scanResult = new ClassGraph().enableClassInfo()
-                .whitelistPackages(IFC_PACKAGE).scan()) {
-            ifcRootSubclassesRegex =
-                    scanResult.getSubclasses(IFC_PACKAGE + ".IfcRoot")
-                            .filter(classInfo -> !classInfo.isAbstract())
-                            .stream().map(classInfo -> "^#[0-9]+=" +
-                            classInfo.getSimpleName().toUpperCase() + "\\(.*")
-                            .toArray(String[]::new);
+        try (ScanResult scanResult = new ClassGraph().enableClassInfo().whitelistPackages(IFC_PACKAGE).scan()) {
+            ifcRootSubclassesRegex = scanResult.getSubclasses(IFC_PACKAGE + ".IfcRoot")
+                    .filter(info -> !info.isAbstract())
+                    .stream().map(info -> "^#[0-9]+=" + info.getSimpleName().toUpperCase() + "\\(.*")
+                    .toArray(String[]::new);
         }
     }
 
@@ -107,20 +100,14 @@ public class EywaToIfcConverterTest {
     @Parameters(name = "{0}")
     public static Iterable<Pair<URL, URL>> data() {
         List<URL> eywaUrls;
-        try (ScanResult r = new ClassGraph()
-                .whitelistPackages(EYWA_RESOURCES_PACKAGE).scan()) {
+        try (ScanResult r = new ClassGraph().whitelistPackages(EYWA_RESOURCES_PACKAGE).scan()) {
             eywaUrls = r.getResourcesWithExtension(EYWA_EXTENSION).getURLs();
         }
         List<URL> expectedIfcUrls = eywaUrls.stream().map(url -> {
             String inputPath = url.toString();
-            String expectedOutputPath =
-                    inputPath.replace(INPUT_DIR, EXPECTED_OUTPUT_DIR);
-            expectedOutputPath = expectedOutputPath.substring(0,
-                                                              expectedOutputPath
-                                                                      .length() -
-                                                                      EYWA_EXTENSION
-                                                                              .length()) +
-                    IFC_EXTENSION;
+            String expectedOutputPath = inputPath.replace(INPUT_DIR, EXPECTED_OUTPUT_DIR);
+            expectedOutputPath = expectedOutputPath.substring(0, expectedOutputPath.length() -
+                    EYWA_EXTENSION.length()) + IFC_EXTENSION;
             URL expectedOutputURL = null;
             try {
                 expectedOutputURL = new URL(expectedOutputPath);
@@ -128,30 +115,27 @@ public class EywaToIfcConverterTest {
                 e.printStackTrace();
             }
             return expectedOutputURL;
-        }).collect(Collectors.toList());
-        return IntStream.range(0, eywaUrls.size()).mapToObj(i -> new Pair<>(
-                eywaUrls.get(i),
-                expectedIfcUrls.get(i))).collect(Collectors.toList());
+        }).collect(toList());
+        return IntStream.range(0, eywaUrls.size())
+                .mapToObj(i -> new Pair<>(eywaUrls.get(i), expectedIfcUrls.get(i)))
+                .collect(toList());
     }
 
     /**
      * @param filePath The path to the IFC file of which to retrieve the DATA
-     *                 section.
+     * section.
      * @return The DATA section of the IFC file.
-     *
-     * @throws IOException       If an I/O error occurs reading from the file or
-     *                           a malformed or unmappable byte sequence is
-     *                           read.
+     * @throws IOException If an I/O error occurs reading from the file or
+     * a malformed or unmappable byte sequence is
+     * read.
      * @throws SecurityException In the case of the default provider, and a
-     *                           security manager is installed, the {@link
-     *                           SecurityManager#checkRead(String) checkRead}
-     *                           method is invoked to check read access to the
-     *                           file.
+     * security manager is installed, the {@link
+     * SecurityManager#checkRead(String) checkRead}
+     * method is invoked to check read access to the
+     * file.
      */
-    private static String getDataSection(@NonNull String filePath)
-            throws IOException {
-        List<String> lines = Files.readAllLines(Paths.get(filePath),
-                                                StandardCharsets.US_ASCII);
+    private static String getDataSection(@NonNull String filePath) throws IOException {
+        List<String> lines = Files.readAllLines(Paths.get(filePath), StandardCharsets.US_ASCII);
         lines = removeNonDeterministicOutput(lines);
         StringBuilder dataSection = new StringBuilder();
         for (int i = 6; i < lines.size() - 1; i++) {
@@ -167,10 +151,8 @@ public class EywaToIfcConverterTest {
      * removes all the substrings that can vary between conversions of the same
      * Eywa file made in different moments. These are timestamps in
      * IFCOWNERHISTORY and GlobalIds in entities that are subtypes of IFCROOT.
-     *
      * @param strings The input List of Strings.
      * @return A copy of {@code strings} without non-deterministic substrings.
-     *
      * @throws NullPointerException If {@code strings} is {@code null}.
      */
     private static List<String> removeNonDeterministicOutput(@NonNull List<String> strings) {
@@ -180,12 +162,11 @@ public class EywaToIfcConverterTest {
             }
             for (String regex : ifcRootSubclassesRegex) {
                 if (s.matches(regex)) {
-                    return s.replaceFirst(Matcher.quoteReplacement(
-                            "'[0-9A-Za-z_$]+'"), "''");
+                    return s.replaceFirst(Matcher.quoteReplacement("'[0-9A-Za-z_$]+'"), "''");
                 }
             }
             return s;
-        }).collect(Collectors.toList());
+        }).collect(toList());
     }
 
     /**
@@ -198,11 +179,8 @@ public class EywaToIfcConverterTest {
 
         // Determines the path where to write the file generated in this test
         String inputPath = inputURL.getPath();
-        String outputPath = OUTPUT_DIR + inputPath.substring(
-                inputPath.lastIndexOf(INPUT_DIR) + INPUT_DIR.length());
-        outputPath = outputPath
-                .substring(0, outputPath.length() - EYWA_EXTENSION.length()) +
-                IFC_EXTENSION;
+        String outputPath = OUTPUT_DIR + inputPath.substring(inputPath.lastIndexOf(INPUT_DIR) + INPUT_DIR.length());
+        outputPath = outputPath.substring(0, outputPath.length() - EYWA_EXTENSION.length()) + IFC_EXTENSION;
 
         // Deserializes the eywa file in an EywaRoot instance, with all its
         // content.
@@ -214,8 +192,7 @@ public class EywaToIfcConverterTest {
         EywaToIfcConverter.writeToFile(result, outputPath);
 
         // Verifies that the converted file is what we expect it to be
-        String expectedOutputContent =
-                getDataSection(expectedOutputURL.getPath());
+        String expectedOutputContent = getDataSection(expectedOutputURL.getPath());
         String outputContent = getDataSection(outputPath);
         Assert.assertEquals(expectedOutputContent, outputContent);
     }

@@ -51,37 +51,25 @@ public class EywaReader {
                 put(Box.class, obj -> builder.addObject((Box) obj));
                 put(Collar.class, obj -> builder.addObject((Collar) obj));
                 put(Curve.class, obj -> builder.addObject((Curve) obj));
-                put(Dielectric.class,
-                    obj -> builder.addObject((Dielectric) obj));
+                put(Dielectric.class, obj -> builder.addObject((Dielectric) obj));
                 put(Dish.class, obj -> builder.addObject((Dish) obj));
-                put(DualExpansionJoint.class,
-                    obj -> builder.addObject((DualExpansionJoint) obj));
-                put(EccentricCone.class,
-                    obj -> builder.addObject((EccentricCone) obj));
+                put(DualExpansionJoint.class, obj -> builder.addObject((DualExpansionJoint) obj));
+                put(EccentricCone.class, obj -> builder.addObject((EccentricCone) obj));
                 put(Empty.class, obj -> builder.addObject((Empty) obj));
                 put(Endplate.class, obj -> builder.addObject((Endplate) obj));
-                put(ExpansionJoint.class,
-                    obj -> builder.addObject((ExpansionJoint) obj));
+                put(ExpansionJoint.class, obj -> builder.addObject((ExpansionJoint) obj));
                 put(FaceSet.class, obj -> builder.addObject((FaceSet) obj));
-                put(FourWaysValve.class,
-                    obj -> builder.addObject((FourWaysValve) obj));
-                put(Instrument.class,
-                    obj -> builder.addObject((Instrument) obj));
+                put(FourWaysValve.class, obj -> builder.addObject((FourWaysValve) obj));
+                put(Instrument.class, obj -> builder.addObject((Instrument) obj));
                 put(Ladder.class, obj -> builder.addObject((Ladder) obj));
                 put(Mesh.class, obj -> builder.addObject((Mesh) obj));
                 put(Nozzle.class, obj -> builder.addObject((Nozzle) obj));
-                put(OrthoValve.class,
-                    obj -> builder.addObject((OrthoValve) obj));
-                put(RectangularBlind.class,
-                    obj -> builder.addObject((RectangularBlind) obj));
-                put(RectangularEndplate.class,
-                    obj -> builder.addObject((RectangularEndplate) obj));
-                put(RectangularFlange.class,
-                    obj -> builder.addObject((RectangularFlange) obj));
-                put(RectangularPlate.class,
-                    obj -> builder.addObject((RectangularPlate) obj));
-                put(RectangularShell.class,
-                    obj -> builder.addObject((RectangularShell) obj));
+                put(OrthoValve.class, obj -> builder.addObject((OrthoValve) obj));
+                put(RectangularBlind.class, obj -> builder.addObject((RectangularBlind) obj));
+                put(RectangularEndplate.class, obj -> builder.addObject((RectangularEndplate) obj));
+                put(RectangularFlange.class, obj -> builder.addObject((RectangularFlange) obj));
+                put(RectangularPlate.class, obj -> builder.addObject((RectangularPlate) obj));
+                put(RectangularShell.class, obj -> builder.addObject((RectangularShell) obj));
                 put(Ring.class, obj -> builder.addObject((Ring) obj));
                 put(Shell.class, obj -> builder.addObject((Shell) obj));
                 put(Sphere.class, obj -> builder.addObject((Sphere) obj));
@@ -89,15 +77,13 @@ public class EywaReader {
                 put(Sweep.class, obj -> builder.addObject((Sweep) obj));
                 put(TankShell.class, obj -> builder.addObject((TankShell) obj));
                 put(Tee.class, obj -> builder.addObject((Tee) obj));
-                put(ThreeWaysValve.class,
-                    obj -> builder.addObject((ThreeWaysValve) obj));
+                put(ThreeWaysValve.class, obj -> builder.addObject((ThreeWaysValve) obj));
                 put(Valve.class, obj -> builder.addObject((Valve) obj));
             }});
 
     /**
      * If {@code builder} can be used for multiple conversions, then the
      * generated instance of this class can be reused too.
-     *
      * @param builder The {@link EywaConverter} to use for the conversion.
      * @throws NullPointerException If {@code builder} is {@code null}.
      */
@@ -108,13 +94,12 @@ public class EywaReader {
     /**
      * Uses the {@link EywaConverter} provided in the constructor to convert the
      * given {@code eywaRoot}.
-     *
      * @param eywaRoot The {@link EywaRoot} to convert.
-     * @throws NullPointerException     If {@code eywaRoot} is {@code null}.
+     * @throws NullPointerException If {@code eywaRoot} is {@code null}.
      * @throws IllegalArgumentException If {@code eywaRoot.metadata.use} exists
-     *                                  and is not {@code view}, if {@code
-     *                                  eywaRoot.object} is {@code null}.
-     * @throws ConversionException      If an error occurs during conversion.
+     * and is not {@code view}, if {@code
+     * eywaRoot.object} is {@code null}.
+     * @throws ConversionException If an error occurs during conversion.
      */
     public void convert(@NonNull EywaRoot eywaRoot) {
         if (eywaRoot.getMetadata() != null &&
@@ -127,8 +112,7 @@ public class EywaReader {
         builder.addHints(eywaRoot.getHints());
         Primitive rootObject = eywaRoot.getObject();
         if (rootObject == null) {
-            throw new IllegalArgumentException(
-                    "can't convert an EywaRoot with no object");
+            throw new IllegalArgumentException("can't convert an EywaRoot with no object");
         }
         builderMethod.get(rootObject.getClass()).accept(rootObject);
         rootObject.prePersist();
@@ -137,9 +121,9 @@ public class EywaReader {
 
     /**
      * @param obj The {@link Primitive} for which to pass all descendants to the
-     *            {@code builder} provided in the constructor.
+     * {@code builder} provided in the constructor.
      * @throws NullPointerException If {@code obj} is {@code null}.
-     * @throws ConversionException  If an error occurs during conversion.
+     * @throws ConversionException If an error occurs during conversion.
      */
     private void addChildren(@NonNull Primitive obj) {
         obj.getChildren().forEach(child -> {
@@ -151,7 +135,6 @@ public class EywaReader {
 
     /**
      * @return The result of the conversion.
-     *
      * @throws ConversionException If an error occurs during conversion.
      */
     public Object getResult() {

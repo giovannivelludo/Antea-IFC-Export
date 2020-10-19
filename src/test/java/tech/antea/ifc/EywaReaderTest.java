@@ -57,8 +57,7 @@ public class EywaReaderTest {
         ScanResult r = new ClassGraph()
                 .whitelistPackages(EywaToIfcConverterTest.EYWA_RESOURCES_PACKAGE)
                 .scan();
-        URL file =
-                r.getResourcesWithLeafName("051200TA001.eywa").getURLs().get(0);
+        URL file = r.getResourcesWithLeafName("051200TA001.eywa").getURLs().get(0);
         ObjectMapper objectMapper = new ObjectMapper();
         EywaRoot eywaRoot = objectMapper.readValue(file, EywaRoot.class);
 
@@ -108,7 +107,6 @@ public class EywaReaderTest {
 
         /**
          * @return The result of the conversion.
-         *
          * @throws ConversionException If an error occurs during conversion.
          */
         @Override
@@ -120,7 +118,6 @@ public class EywaReaderTest {
         /**
          * Call this method to use EywaRoot's hints in the conversion (if
          * possible).
-         *
          * @param hints {@link EywaRoot#getHints()}
          * @throws ConversionException If an error occurs during conversion.
          */
@@ -138,7 +135,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Beam} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Beam obj) {
@@ -148,7 +145,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Blind} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Blind obj) {
@@ -158,7 +155,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Box} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Box obj) {
@@ -168,7 +165,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Collar} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Collar obj) {
@@ -178,7 +175,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Curve} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Curve obj) {
@@ -188,7 +185,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Dielectric} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Dielectric obj) {
@@ -198,7 +195,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Dish} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Dish obj) {
@@ -208,7 +205,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link DualExpansionJoint} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(DualExpansionJoint obj) {
@@ -218,7 +215,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link EccentricCone} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(EccentricCone obj) {
@@ -228,7 +225,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Empty} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Empty obj) {
@@ -238,7 +235,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Endplate} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Endplate obj) {
@@ -248,7 +245,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link ExpansionJoint} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(ExpansionJoint obj) {
@@ -258,7 +255,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link FaceSet} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(FaceSet obj) {
@@ -268,7 +265,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link FourWaysValve} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(FourWaysValve obj) {
@@ -278,7 +275,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Instrument} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Instrument obj) {
@@ -288,7 +285,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Ladder} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Ladder obj) {
@@ -298,7 +295,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Mesh} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Mesh obj) {
@@ -308,7 +305,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Nozzle} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Nozzle obj) {
@@ -318,7 +315,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link OrthoValve} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(OrthoValve obj) {
@@ -328,7 +325,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link RectangularBlind} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(RectangularBlind obj) {
@@ -338,7 +335,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link RectangularEndplate} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(RectangularEndplate obj) {
@@ -348,7 +345,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link RectangularFlange} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(RectangularFlange obj) {
@@ -358,7 +355,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link RectangularPlate} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(RectangularPlate obj) {
@@ -368,7 +365,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link RectangularShell} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(RectangularShell obj) {
@@ -378,7 +375,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Ring} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Ring obj) {
@@ -388,7 +385,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Shell} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Shell obj) {
@@ -398,7 +395,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Sphere} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Sphere obj) {
@@ -408,7 +405,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Stair} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Stair obj) {
@@ -418,7 +415,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Sweep} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Sweep obj) {
@@ -428,7 +425,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link TankShell} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(TankShell obj) {
@@ -438,7 +435,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Tee} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Tee obj) {
@@ -448,7 +445,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link ThreeWaysValve} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(ThreeWaysValve obj) {
@@ -458,7 +455,7 @@ public class EywaReaderTest {
         /**
          * @param obj The {@link Valve} to convert.
          * @throws NullPointerException If {@code obj} is null.
-         * @throws ConversionException  If an error occurs during conversion.
+         * @throws ConversionException If an error occurs during conversion.
          */
         @Override
         public void addObject(Valve obj) {
