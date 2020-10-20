@@ -68,8 +68,8 @@ public class EywaToIfcConverter implements EywaConverter {
 
     private static final String COMPANY_NAME = "Antea S.r.l.";
     private static final String PROGRAM_NAME = "Antea IFC Export";
-    private static final String PROGRAM_VERSION = "0.0.1-SNAPSHOT";
-    private static final String PROGRAM_ID = "com.anteash:ifc";
+    private static final String PROGRAM_VERSION = "0.1.0";
+    private static final String PROGRAM_ID = "tech.antea:eywa2ifc";
     private static final ObjectMapper jsonMapper = new ObjectMapper();
     /**
      * Representation context for all geometries.

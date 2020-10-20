@@ -1,8 +1,3 @@
-This file is part of Antea IFC Export.
-
-Author: Giovanni Velludo
---
-
 The MIT License (MIT)
 
 Copyright (c) 2020 Antea srl

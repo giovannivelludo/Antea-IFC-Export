@@ -2,10 +2,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.anteash</groupId>
-    <artifactId>ifc</artifactId>
+    <groupId>tech.antea</groupId>
+    <artifactId>eywa2ifc</artifactId>
     <packaging>jar</packaging>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>Antea IFC Export</name>
 
     <prerequisites>
@@ -108,9 +108,9 @@
                 <version>4.8.60</version>
             </dependency>
             <dependency>
-                <groupId>com.anteash</groupId>
+                <groupId>tech.antea</groupId>
                 <artifactId>IFC.JAVA</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>0.1.0</version>
             </dependency>
             <dependency>
                 <groupId>jakarta.persistence</groupId>
@@ -122,7 +122,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.anteash</groupId>
+            <groupId>tech.antea</groupId>
             <artifactId>IFC.JAVA</artifactId>
         </dependency>
         <dependency>
