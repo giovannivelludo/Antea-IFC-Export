@@ -233,6 +233,7 @@
                     <useDefaultExcludes>true</useDefaultExcludes>
                     <useDefaultMapping>true</useDefaultMapping>
                     <encoding>UTF-8</encoding>
+                    <skipExistingHeaders>true</skipExistingHeaders>
                 </configuration>
                 <executions>
                     <execution>

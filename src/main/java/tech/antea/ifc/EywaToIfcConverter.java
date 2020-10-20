@@ -385,8 +385,8 @@ public class EywaToIfcConverter implements EywaConverter {
         double radiusMinusRadiusThird = radius - radiusThird;
         double lengthThirtieth = length / 30;
         double innerRadius = radius - thickness;
-        double innerRadiusPlusRadiusThird = radius + radiusThird;
-        double innerRadiusMinusRadiusThird = radius - radiusThird;
+        double innerRadiusPlusRadiusThird = innerRadius + radiusThird;
+        double innerRadiusMinusRadiusThird = innerRadius - radiusThird;
 
         // creating the right part of the vertical section of the expansionJoint
         IfcPolyline expJointSection =
